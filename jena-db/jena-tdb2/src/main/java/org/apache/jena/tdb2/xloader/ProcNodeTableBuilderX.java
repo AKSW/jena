@@ -107,7 +107,7 @@ public class ProcNodeTableBuilderX {
             List<String> sortCmdBasics = Arrays.asList(
                   "sort",
                     "--temporary-directory="+loaderFiles.TMPDIR, "--buffer-size=50%",
-                    "--parallel=2", "--unique",
+                    "--parallel=16", "--unique",
                     //"--compress-program=/usr/bin/gzip",
                     "--key=1,1"
                     );
