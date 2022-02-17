@@ -16,23 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.jena.integration;
+package org.apache.jena.riot.rowset;
 
-import org.junit.runner.RunWith ;
-import org.junit.runners.Suite ;
+import org.apache.jena.riot.rowset.rw.TestRowSetWriterCSV;
+import org.apache.jena.riot.rowset.rw.TestRowSetWriterTSV;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses( {
-    // Done in the module
-    //    TestRDFLinkLocalTxnMem
-    //    TestRDFLinkLocalMRSW
-
-    // Addition tests added here.
-    TestRDFLinkLocalTDB.class,
-    TestRDFLinkLocalTDB2.class,
-    TestRDFLinkHTTP.class,
-    TestRDFLinkFuseki.class,
-    TestRDFLinkFusekiBinary.class
+    TestRowSetWriterCSV.class,
+    TestRowSetWriterTSV.class
 })
 
-public class TS_RDFLinkIntegration {}
+public class TS_RowSetRIOT { }

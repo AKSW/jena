@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.jena.atlas.iterator.Iter;
+import org.apache.jena.atlas.lib.StrUtils;
 import org.apache.jena.atlas.logging.LogCtl;
 import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.graph.Node ;
@@ -442,6 +443,47 @@ public class TestService {
         String innerQuery = "SELECT ?s { ?s ?p ?o }";
         String queryString = "ASK { SERVICE <"+SERVICE+ "> { "+innerQuery+" } }";
         QueryExec.dataset(localDataset()).query(queryString).ask();
+    }
+
+    // JENA-2280 : No scope renaming. Tests the setup for following tests.
+    @Test public void service_scope_service_0() {
+        String queryString = StrUtils.strjoinNL
+                ("SELECT (?value as ?temp) {"
+                ,"  SELECT ?value {"
+                ,"    SERVICE <"+SERVICE+ "> { VALUES ?value { 'test' }  }"
+                ,"  }"
+                ,"}");
+        RowSet rs = QueryExec.dataset(localDataset()).query(queryString).select().materialize();
+        Binding row = rs.next();
+        assertTrue(row.contains("temp"));
+    }
+
+    // JENA-2280
+    // ?value is scoped as ?/value and this needs dealing with in SERVCE results.
+    @Test public void service_scope_service_2() {
+
+        String queryString = StrUtils.strjoinNL
+                ("SELECT ?temp {"
+                ,"  SELECT (?value as ?temp) {"
+                ,"    SERVICE <"+SERVICE+ "> { VALUES ?value { 'test' }  }"
+                ,"  }"
+                ,"}");
+        RowSet rs = QueryExec.dataset(localDataset()).query(queryString).select().materialize();
+        Binding row = rs.next();
+        assertTrue(row.contains("temp"));
+    }
+
+    // JENA-2280
+    @Test public void service_scope_service_3() {
+        String queryString = StrUtils.strjoinNL
+                ("SELECT * {"
+                ,"  SELECT (?value as ?temp) {"
+                ,"    SERVICE <"+SERVICE+ "> { VALUES ?value { 'test' }  }"
+                ,"  }"
+                ,"}");
+        RowSet rs = QueryExec.dataset(localDataset()).query(queryString).select().materialize();
+        Binding row = rs.next();
+        assertTrue(row.contains("temp"));
     }
 
     private static void runWithModifier(String key, HttpRequestModifier modifier, Runnable action) {

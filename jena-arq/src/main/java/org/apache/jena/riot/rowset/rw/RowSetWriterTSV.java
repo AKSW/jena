@@ -65,16 +65,19 @@ public class RowSetWriterTSV implements RowSetWriter {
     }
 
     @Override
-    public void write(OutputStream out, boolean result, Context context) {}
+    public void write(OutputStream out, boolean result, Context context) {
+        output(IO.wrapUTF8(out), result);
+    }
 
     private static void output(AWriter out, boolean booleanResult) {
-        out.write(headerBytes);
-        if ( booleanResult )
-            out.write(yesString);
-        else
-            out.write(noString);
-        out.write(NL);
-        out.flush();
+        try {
+            out.write(headerBytes);
+            if ( booleanResult )
+                out.write(yesString);
+            else
+                out.write(noString);
+            out.write(NL);
+        } finally { out.flush(); }
     }
 
     private static void output(AWriter out, RowSet rowSet) {
