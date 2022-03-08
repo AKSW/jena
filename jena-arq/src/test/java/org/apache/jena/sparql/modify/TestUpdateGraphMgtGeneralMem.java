@@ -16,35 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.jena.rdfs;
+package org.apache.jena.sparql.modify ;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.rdfs.engine.GraphIncRDFS;
+import org.apache.jena.sparql.core.DatasetGraph ;
+import org.apache.jena.sparql.core.DatasetGraphFactory ;
 
-/**
- * Separate data and vocabulary; includes vocabulary and vocabulary derived
- * inferences.
- * <p>
- * Normal usage is {@Link TestGraphSplitRDFS}.
- */
-public class TestGraphIncRDFS_Split extends AbstractTestGraphRDFS {
-    private Graph testGraph = null;
-
-    public TestGraphIncRDFS_Split(){
-        SetupRDFS setup = new SetupRDFS(vocab);
-        testGraph = new GraphIncRDFS(data, setup);
-    }
-
+public class TestUpdateGraphMgtGeneralMem extends AbstractTestUpdateGraphMgt {
     @Override
-    protected boolean removeVocabFromReferenceResults() { return false; }
-
-    @Override
-    protected Graph getTestGraph() {
-        return testGraph;
-    }
-
-    @Override
-    protected String getTestLabel() {
-        return "Split data, vocab (with RDFS)";
+    protected DatasetGraph getEmptyDatasetGraph() {
+        return DatasetGraphFactory.create() ;
     }
 }

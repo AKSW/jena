@@ -18,6 +18,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home'
+import NotFound from '@/views/NotFound'
 
 Vue.use(VueRouter)
 
@@ -28,7 +29,9 @@ const routes = [
     component: Home
   },
   {
-    path: '/dataset/:datasetName/query',
+    // JENA-2295: we expand the pattern of this path with an `*` to allow for the YASGUI
+    //            query parameter, e.g. /#/dataset/abc/query?query=SELECT...
+    path: '/dataset/:datasetName/query*',
     name: 'DatasetQuery',
     component: () => import(/* webpackChunkName: "datasetQuery" */ '../views/dataset/Query'),
     props: true
@@ -70,6 +73,11 @@ const routes = [
     path: '/documentation',
     name: 'Help',
     component: () => import(/* webpackChunkName: "documentation" */ '../views/Help')
+  },
+  {
+    path: '*',
+    name: 'Not Found',
+    component: NotFound
   }
 ]
 

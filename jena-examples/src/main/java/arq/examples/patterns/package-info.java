@@ -16,35 +16,5 @@
  * limitations under the License.
  */
 
-package org.apache.jena.rdfs;
-
-import org.apache.jena.graph.Graph;
-import org.apache.jena.rdfs.engine.GraphIncRDFS;
-
-/**
- * Separate data and vocabulary; includes vocabulary and vocabulary derived
- * inferences.
- * <p>
- * Normal usage is {@Link TestGraphSplitRDFS}.
- */
-public class TestGraphIncRDFS_Split extends AbstractTestGraphRDFS {
-    private Graph testGraph = null;
-
-    public TestGraphIncRDFS_Split(){
-        SetupRDFS setup = new SetupRDFS(vocab);
-        testGraph = new GraphIncRDFS(data, setup);
-    }
-
-    @Override
-    protected boolean removeVocabFromReferenceResults() { return false; }
-
-    @Override
-    protected Graph getTestGraph() {
-        return testGraph;
-    }
-
-    @Override
-    protected String getTestLabel() {
-        return "Split data, vocab (with RDFS)";
-    }
-}
+/** This package is for examples related to the internal workings for ARQ and RIOT. */
+package arq.examples.patterns;
