@@ -117,13 +117,7 @@ public class QueryRewriteIndex {
         if (indexActive) {
             try {
                 String key = nodeIDCache.get(subjectGeometryLiteral) + KEY_SEPARATOR + predicate.getURI() + KEY_SEPARATOR + nodeIDCache.get(objectGeometryLiteral);
-                Boolean result;
-                if (index.containsKey(key)) {
-                    result = index.get(key);
-                } else {
-                    result = propertyFunction.testFilterFunction(subjectGeometryLiteral, objectGeometryLiteral);
-                    index.put(key, result);
-                }
+                Boolean result = index.computeIfAbsent(key, k -> propertyFunction.testFilterFunction(subjectGeometryLiteral, objectGeometryLiteral));
                 return result;
             } catch (NullPointerException ex) {
                 //Catch NullPointerException and fall through to default action.
