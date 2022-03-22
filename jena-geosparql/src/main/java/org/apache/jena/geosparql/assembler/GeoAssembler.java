@@ -33,6 +33,7 @@ import org.apache.jena.atlas.io.IO;
 import org.apache.jena.geosparql.configuration.GeoSPARQLConfig;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.configuration.SrsException;
+import org.apache.jena.geosparql.spatial.SpatialIndex;
 import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
