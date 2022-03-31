@@ -24,16 +24,20 @@
           <b-card-header header-tag="nav">
             <Menu :dataset-name="datasetName" />
           </b-card-header>
-          <b-card-body>
+          <b-card-body v-if="!this.services['gsp-rw'] || this.services['gsp-rw'].length === 0">
+            <b-alert show variant="warning">No service for adding data available. The Graph Store Protocol service should be configured to allow adding data.</b-alert>
+          </b-card-body>
+          <b-card-body v-else>
             <b-card-title>Available Graphs</b-card-title>
             <div>
               <b-row class="mb-2">
                 <b-col sm="12" md="4">
                   <div class="mb-2">
-                    <b-btn
+                    <b-button
                       @click="listCurrentGraphs()"
                       :disabled="!!loadingGraphs"
-                    >list current graphs</b-btn>
+                      variant="primary"
+                    >list current graphs</b-button>
                   </div>
                   <b-list-group>
                     <b-list-group-item
@@ -118,6 +122,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
+import currentDatasetMixin from '@/mixins/current-dataset'
+import { displayError } from '@/utils'
 
 library.add(faTimes, faCheck)
 
@@ -132,12 +138,9 @@ export default {
     FontAwesomeIcon
   },
 
-  props: {
-    datasetName: {
-      type: String,
-      required: true
-    }
-  },
+  mixins: [
+    currentDatasetMixin
+  ],
 
   data () {
     return {
@@ -218,13 +221,9 @@ export default {
       this.code = ''
       this.selectedGraph = ''
       try {
-        this.graphs = await this.$fusekiService.countGraphsTriples(this.datasetName)
+        this.graphs = await this.$fusekiService.countGraphsTriples(this.datasetName, this.services.query['srv.endpoints'][0])
       } catch (error) {
-        this.$bvToast.toast(`${error}`, {
-          title: 'Error',
-          noAutoHide: true,
-          appendToast: false
-        })
+        displayError(this, error)
       } finally {
         this.loadingGraphs = false
         this.loadingGraph = false
@@ -243,6 +242,7 @@ export default {
         const result = await this.$fusekiService.fetchGraph(this.datasetName, graphName)
         this.code = result.data
       } catch (error) {
+        console.error(error)
         this.$bvToast.toast(`${error}`, {
           title: 'Error',
           noAutoHide: true,
