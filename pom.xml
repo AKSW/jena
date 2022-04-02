@@ -58,7 +58,7 @@
 
     <!-- Testing -->
     <ver.junit>4.13.2</ver.junit>  
-    <ver.mockito>4.2.0</ver.mockito>
+    <ver.mockito>4.4.0</ver.mockito>
     <ver.awaitility>4.1.1</ver.awaitility>
     <ver.contract.tests>0.2.0</ver.contract.tests>
 
@@ -69,7 +69,7 @@
     <ver.lucene>8.11.1</ver.lucene>
 
     <ver.jetty>10.0.8</ver.jetty>
-    <ver.shiro>1.8.0</ver.shiro>
+    <ver.shiro>1.9.0</ver.shiro>
 
     <ver.protobuf>3.19.3</ver.protobuf>
     <ver.libthrift>0.15.0</ver.libthrift>
@@ -104,7 +104,7 @@
     <ver.micrometer>1.8.3</ver.micrometer>
 
     <!-- For testing, not shipped -->
-    <ver.graalvm>21.3.1</ver.graalvm>
+    <ver.graalvm>22.0.0.2</ver.graalvm>
     <ver.jython>2.7.2</ver.jython>
 
     <!--- GeoSPARQL related -->
