@@ -21,13 +21,6 @@ import io.github.galbiston.expiring_map.ExpiringMap;
 import static io.github.galbiston.expiring_map.MapDefaultValues.MAP_EXPIRY_INTERVAL;
 import static io.github.galbiston.expiring_map.MapDefaultValues.UNLIMITED_MAP;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.jena.ext.com.google.common.cache.CacheBuilder;
-import org.apache.jena.ext.com.google.common.cache.CacheLoader;
-import org.apache.jena.ext.com.google.common.cache.LoadingCache;
 import org.apache.jena.geosparql.configuration.GeoSPARQLConfig;
 import org.apache.jena.geosparql.geo.topological.GenericPropertyFunction;
 import org.apache.jena.graph.Node;
@@ -55,9 +48,6 @@ public class QueryRewriteIndex {
     private static long MAP_EXPIRY_INTERVAL_DEFAULT = MAP_EXPIRY_INTERVAL;
     private static final String KEY_SEPARATOR = "@";
 
-    private LoadingCache<Node, Integer> nodeIDCache;
-    private AtomicInteger cacheCounter;
-
     public static final Symbol QUERY_REWRITE_INDEX_SYMBOL = Symbol.create("http://jena.apache.org/spatial#query-index");
 
     public QueryRewriteIndex() {
@@ -66,15 +56,6 @@ public class QueryRewriteIndex {
         this.index = new ExpiringMap<>(queryRewriteLabel, MAP_SIZE_DEFAULT, MAP_EXPIRY_INTERVAL_DEFAULT);
         if (indexActive) {
             index.startExpiry();
-            cacheCounter = new AtomicInteger(0);
-            nodeIDCache = CacheBuilder.newBuilder()
-                    .expireAfterWrite(MAP_EXPIRY_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS)
-                    .build(
-                            new CacheLoader<>() {
-                                public Integer load(Node key) {
-                                    return cacheCounter.incrementAndGet();
-                                }
-                            });
         }
     }
 
@@ -83,21 +64,6 @@ public class QueryRewriteIndex {
         this.indexActive = true;
         this.index = new ExpiringMap<>(queryRewriteLabel, maxSize, expiryInterval);
         this.index.startExpiry();
-
-        cacheCounter = new AtomicInteger(0);
-        CacheBuilder<Object, Object> builder = CacheBuilder.newBuilder();
-        if (maxSize > 0) {
-            builder = builder.maximumSize(maxSize);
-        }
-        if (expiryInterval > 0) {
-            builder = builder.expireAfterWrite(expiryInterval, TimeUnit.MILLISECONDS);
-        }
-        nodeIDCache = builder.build(
-                        new CacheLoader<>() {
-                            public Integer load(Node key) {
-                                return cacheCounter.incrementAndGet();
-                            }
-                        });
     }
 
     /**
@@ -115,14 +81,11 @@ public class QueryRewriteIndex {
         }
 
         if (indexActive) {
+            String key = subjectGeometryLiteral.getLiteralLexicalForm() + KEY_SEPARATOR + predicate.getURI() + KEY_SEPARATOR + objectGeometryLiteral.getLiteralLexicalForm();
             try {
-                String key = nodeIDCache.get(subjectGeometryLiteral) + KEY_SEPARATOR + predicate.getURI() + KEY_SEPARATOR + nodeIDCache.get(objectGeometryLiteral);
-                Boolean result = index.computeIfAbsent(key, k -> propertyFunction.testFilterFunction(subjectGeometryLiteral, objectGeometryLiteral));
-                return result;
+                return index.computeIfAbsent(key, k -> propertyFunction.testFilterFunction(subjectGeometryLiteral, objectGeometryLiteral));
             } catch (NullPointerException ex) {
                 //Catch NullPointerException and fall through to default action.
-            } catch (ExecutionException e) {
-                // TODO log
             }
         }
 
