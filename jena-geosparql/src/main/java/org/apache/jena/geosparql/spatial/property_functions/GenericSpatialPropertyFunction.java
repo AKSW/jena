@@ -38,9 +38,8 @@ import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.engine.QueryIterator;
 import org.apache.jena.sparql.engine.binding.Binding;
-import org.apache.jena.sparql.engine.iterator.QueryIterConcat;
-import org.apache.jena.sparql.engine.iterator.QueryIterNullIterator;
-import org.apache.jena.sparql.engine.iterator.QueryIterSingleton;
+import org.apache.jena.sparql.engine.binding.BindingFactory;
+import org.apache.jena.sparql.engine.iterator.*;
 import org.apache.jena.sparql.expr.ExprEvalException;
 import org.apache.jena.sparql.pfunction.PFuncSimpleAndList;
 import org.apache.jena.sparql.pfunction.PropFuncArg;
@@ -93,7 +92,7 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         }
 
         if (subject.isVariable()) {
-            return checkUnbound(binding, execCxt, subject, limit);
+            return checkUnbound2(binding, execCxt, subject, limit);
         } else {
             //Subject is not a variable (and not a URI or Blank - tested earlier).
             throw new ExprEvalException("Not a URI, Blank or variable: " + FmtUtils.stringForNode(subject));
@@ -208,6 +207,34 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
             }
         }
         return queryIterConcat;
+    }
+
+    private QueryIterator checkUnbound2(Binding binding, ExecutionContext execCxt, Node subject, int limit) {
+
+        if (limit < 0) {
+            limit = Integer.MAX_VALUE;
+        }
+
+        //Find all Features in the spatial index which are within the rough search envelope.
+        SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
+        HashSet<Resource> features = searchEnvelope.check(spatialIndex);
+
+        Var subjectVar = Var.alloc(subject.getName());
+
+        if (!requireSecondFilter()) {
+            Iterator<Binding> iterator = features.stream()
+                    .map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
+                    .limit(limit)
+                    .iterator();
+            return QueryIterPlainWrapper.create(iterator, execCxt);
+        } else {
+            Iterator<Binding> iterator = features.stream()
+                    .filter(feature -> checkBound(execCxt, feature.asNode()))
+                    .map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
+                    .limit(limit)
+                    .iterator();
+            return QueryIterPlainWrapper.create(iterator, execCxt);
+        }
     }
 
 }
