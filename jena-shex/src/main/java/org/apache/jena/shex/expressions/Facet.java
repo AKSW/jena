@@ -16,33 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.jena.sparql.engine.http;
+package org.apache.jena.shex.expressions;
 
-/** A collection of parameters for protocol use.
- * @deprecated Provides for use of old Apache HttpClient related code. To be removed.
- */
-@Deprecated
-public class Params extends org.apache.jena.sparql.exec.http.Params {
-    public Params() {
-        super();
-    }
+public interface Facet {
 
-    public Params(Params other) {
-        super();
-        merge(other);
-    }
-
-    /** @deprecated Use {@link #add(String,String)} */
-    @Deprecated
-    public Params addParam(String name, String value) {
-        add(name, value);
-        return this;
-    }
-
-    /** @deprecated Use {@link #add(String)} */
-    @Deprecated
-    public Params addParam(String name) {
-        add(name);
-        return this;
-    }
 }
