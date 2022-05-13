@@ -33,6 +33,8 @@ public class ShapeExprRef extends ShapeExpression {
 
     public ShapeExprRef(Node ref) { this.ref = ref; }
 
+    public Node getRef() { return ref; }
+
     @Override
     public boolean satisfies(ValidationContext vCxt, Node data) {
         ShexShape shape = vCxt.getShape(ref);

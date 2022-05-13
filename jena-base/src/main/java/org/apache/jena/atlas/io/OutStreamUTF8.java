@@ -95,6 +95,8 @@ public final class OutStreamUTF8 extends Writer {
      * 31   U+7FFFFFFF                        1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
      */
     public static void output(OutputStream out, int ch) throws IOException {
+        //ProcUTF8.convert(ch, x->out.write(x);
+
         if ( ch != 0 && ch <= 127 ) {
             // 7 bits
             out.write(ch);

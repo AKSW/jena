@@ -23,12 +23,12 @@
   <artifactId>jena</artifactId>
   <packaging>pom</packaging>
   <url>https://jena.apache.org/</url>
-  <version>4.5.0-SNAPSHOT</version>
+  <version>4.6.0-SNAPSHOT</version>
 
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>25</version>
+    <version>26</version>
   </parent>
 
   <licenses>
@@ -54,7 +54,7 @@
      <!-- Build -->
     <java.version>11</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2022-01-30T15:02:59Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2022-05-01T13:46:56Z</project.build.outputTimestamp>
 
     <!-- Testing -->
     <ver.junit>4.13.2</ver.junit>  
@@ -68,11 +68,11 @@
 
     <ver.lucene>8.11.1</ver.lucene>
 
-    <ver.jetty>10.0.8</ver.jetty>
+    <ver.jetty>10.0.9</ver.jetty>
     <ver.shiro>1.9.0</ver.shiro>
 
     <ver.protobuf>3.19.3</ver.protobuf>
-    <ver.libthrift>0.15.0</ver.libthrift>
+    <ver.libthrift>0.16.0</ver.libthrift>
 
     <!-- JSON-LD 1.1 -->
     <ver.titanium-json-ld>1.2.0</ver.titanium-json-ld>
@@ -88,11 +88,11 @@
          and use that or later.
     -->
     <ver.jsonldjava>0.13.4</ver.jsonldjava>
-    <ver.jackson>2.13.1</ver.jackson>
+    <ver.jackson>2.13.2.20220328</ver.jackson>
     <ver.httpclient>4.5.13</ver.httpclient>
     <ver.httpcore>4.4.15</ver.httpcore>
 
-    <ver.shaded-guava>31.0.1-jre</ver.shaded-guava>
+    <ver.shaded-guava>31.1-jre</ver.shaded-guava>
     <ver.gson>2.9.0</ver.gson>
     <ver.commonsio>2.11.0</ver.commonsio>
     <ver.commonscli>1.5.0</ver.commonscli>
@@ -102,7 +102,7 @@
     <ver.commons-codec>1.15</ver.commons-codec>
     <ver.commons-compress>1.21</ver.commons-compress>
     <ver.dexxcollection>0.7</ver.dexxcollection>
-    <ver.micrometer>1.8.3</ver.micrometer>
+    <ver.micrometer>1.8.5</ver.micrometer>
 
     <!-- For testing, not shipped -->
     <ver.graalvm>22.0.0.2</ver.graalvm>
@@ -895,7 +895,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.9.0</version>
+          <version>3.10.1</version>
           <configuration>
             <release>${java.version}</release>
           </configuration>
@@ -1069,7 +1069,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.4</version>
+          <version>3.3.0</version>
         </plugin>
 
         <plugin>
