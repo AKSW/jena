@@ -20,6 +20,8 @@ package org.apache.jena.geosparql.spatial.property_functions;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.stream.Stream;
+
 import org.apache.commons.collections4.iterators.IteratorChain;
 import org.apache.jena.datatypes.DatatypeFormatException;
 import org.apache.jena.geosparql.implementation.GeometryWrapper;
@@ -221,20 +223,14 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
 
         Var subjectVar = Var.alloc(subject.getName());
 
-        if (!requireSecondFilter()) {
-            Iterator<Binding> iterator = features.stream()
-                    .map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
-                    .limit(limit)
-                    .iterator();
-            return QueryIterPlainWrapper.create(iterator, execCxt);
-        } else {
-            Iterator<Binding> iterator = features.stream()
-                    .filter(feature -> checkBound(execCxt, feature.asNode()))
-                    .map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
-                    .limit(limit)
-                    .iterator();
-            return QueryIterPlainWrapper.create(iterator, execCxt);
+        Stream<Resource> stream = features.stream();
+        if (requireSecondFilter()) {
+            stream = stream.filter(feature -> checkBound(execCxt, feature.asNode()));
         }
+        Iterator<Binding> iterator = stream.map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
+                .limit(limit)
+                .iterator();
+        return QueryIterPlainWrapper.create(iterator, execCxt);
     }
 
 }
