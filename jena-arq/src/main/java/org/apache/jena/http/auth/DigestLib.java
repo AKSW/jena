@@ -18,10 +18,10 @@
 
 package org.apache.jena.http.auth;
 
-import static org.apache.jena.http.auth.RFC2617.A1_MD5;
-import static org.apache.jena.http.auth.RFC2617.A2_auth;
-import static org.apache.jena.http.auth.RFC2617.H;
-import static org.apache.jena.http.auth.RFC2617.KD;
+import static org.apache.jena.http.auth.AuthHttp.A1_MD5;
+import static org.apache.jena.http.auth.AuthHttp.A2_auth;
+import static org.apache.jena.http.auth.AuthHttp.H;
+import static org.apache.jena.http.auth.AuthHttp.KD;
 
 import java.net.Authenticator;
 import java.net.Authenticator.RequestorType;
@@ -37,7 +37,7 @@ import org.apache.jena.atlas.lib.Pair;
 import org.apache.jena.atlas.web.HttpException;
 import org.apache.jena.riot.web.HttpNames;
 
-public class DigestLib {
+class DigestLib {
 
     /** From the challenge, username and password, calculate the response.field. */
     public static String calcDigestChallengeResponse(AuthChallenge auth,
@@ -93,16 +93,15 @@ public class DigestLib {
      * Function to modify a {@link java.net.http.HttpRequest.Builder} for digest authentication.
      * One instance of this function is used for each digest session.
      */
-    public static AuthRequestModifier buildDigest(AuthChallenge aHeader, String user, String password, String method, String requestTarget) {
+    public static AuthRequestModifier digestAuthModifier(AuthChallenge aHeader, String user, String password, String method, String requestTarget) {
         String clientNonce = DigestLib.generateNonce();
         AtomicLong ncCounter = new AtomicLong(0);
-        return req->{
+        return request->{
             // Bump nc
             String nc = String.format("%08X", ncCounter.getAndIncrement());
-            String responseField =
-                    DigestLib.calcDigestChallengeResponse(aHeader, user, password,
-                                                          method, requestTarget,
-                                                          clientNonce, nc, "auth");
+            String responseField = calcDigestChallengeResponse(aHeader, user, password,
+                                                               method, requestTarget,
+                                                               clientNonce, nc, "auth");
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("Digest ");
             field(stringBuilder, true, "username", user, true);
@@ -116,8 +115,8 @@ public class DigestLib {
             field(stringBuilder, false, "opaque", aHeader.opaque, true);
             String x = stringBuilder.toString();
             // setHeader - replace previous
-            req.setHeader(HttpNames.hAuthorization , x);
-            return req;
+            request.setHeader(HttpNames.hAuthorization , x);
+            return request;
         };
     }
 

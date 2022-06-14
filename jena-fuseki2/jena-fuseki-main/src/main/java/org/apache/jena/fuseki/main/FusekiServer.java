@@ -24,6 +24,7 @@ import static org.apache.jena.fuseki.Fuseki.serverLog;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javax.servlet.Filter;
@@ -413,18 +414,24 @@ public class FusekiServer {
         private String                   httpsKeystore          = null;
         private String                   httpsKeystorePasswd    = null;
 
-        // Other servlets to add. Te pathspec for servlets must be unique.
+        // Bearer authentication : verify and extract the user for a request.
+        private Function<String, String> bearerVerifiedUser = null;
+
+        // Other servlets to add. The pathspec for servlets must be unique.
         // Order does not matter, the rules of pathspec dispatch are "exact match"
         // before "prefix match".
         private Map<String, HttpServlet> servlets           = new HashMap<>();
-        // whereas several filters can share a path spec an dorder matters.
-        private List<Pair<String, Filter>> filters          = new ArrayList<>();
+        // whereas several filters can share a path spec and order matters.
+        private List<Pair<String, Filter>> beforeFilters    = new ArrayList<>();
+        private List<Pair<String, Filter>> afterFilters     = new ArrayList<>();
 
         private String                   contextPath        = "/";
         private String                   staticContentDir   = null;
         private SecurityHandler          securityHandler    = null;
         private Map<String, Object>      servletAttr        = new HashMap<>();
 
+        // Setting and access methods also not active.
+        //private Context                  context            = null;
         // The default CORS settings.
         private static final Map<String, String> corsInitParamsDft = new LinkedHashMap<>();
         static {
@@ -751,7 +758,7 @@ public class FusekiServer {
         public Builder parseConfig(Model model) {
             requireNonNull(model, "model");
             Resource server = FusekiConfig.findServer(model);
-            processServerLevel(server);
+            processConfigServerLevel(server);
 
             // Process server and services, whether via server ja:services or, if absent, by finding by type.
             // Side effect - sets global context.
@@ -787,7 +794,7 @@ public class FusekiServer {
          * Server level setting specific to Fuseki main.
          * General settings done by {@link FusekiConfig#processServerConfiguration}.
          */
-        private void processServerLevel(Resource server) {
+        private void processConfigServerLevel(Resource server) {
             if ( server == null )
                 return;
 
@@ -796,8 +803,13 @@ public class FusekiServer {
             enableMetrics(argBoolean(server, FusekiVocab.pServerMetrics, false));
             enableCompact(argBoolean(server, FusekiVocab.pServerCompact, false));
 
-            // Extract settings - the server building is done in buildSecurityHandler,
-            // buildAccessControl.  Dataset and graph level happen in assemblers.
+            processConfAuthentication(server);
+
+            serverAuth = FusekiConfig.allowedUsers(server);
+        }
+
+        /** Process password file, auth and realm settings on the server description. **/
+        private void processConfAuthentication(Resource server) {
             String passwdFile = GraphUtils.getAsStringValue(server, FusekiVocab.pPasswordFile);
             if ( passwdFile != null )
                 passwordFile(passwdFile);
@@ -806,9 +818,18 @@ public class FusekiServer {
                 realm(realmStr);
 
             String authStr = GraphUtils.getAsStringValue(server, FusekiVocab.pAuth);
-            if ( authStr != null )
-                auth(AuthScheme.scheme(authStr));
-            serverAuth = FusekiConfig.allowedUsers(server);
+            if ( authStr != null ) {
+                AuthScheme authScheme = AuthScheme.scheme(authStr);
+                switch (authScheme) {
+                    case BASIC: case DIGEST:
+                        break;
+                    case BEARER:
+                        throw new FusekiConfigException("Authentication scheme not supported in config file: \""+authStr+"\"");
+                    case UNKNOWN: default:
+                        throw new FusekiConfigException("Authentication scheme not recognized: \""+authStr+"\"");
+                }
+                auth(authScheme);
+            }
         }
 
         private static boolean argBoolean(Resource r, Property p, boolean dftValue) {
@@ -824,16 +845,6 @@ public class FusekiServer {
             } catch (JenaException ex) {
                 throw new FusekiConfigException("Not a boolean for '"+p+"' : "+stmt.getObject());
             }
-        }
-
-        /** Process password file, auth and realm settings on the server description. **/
-        private void processAuthentication(Resource server) {
-            String passwdFile = GraphUtils.getAsStringValue(server, FusekiVocab.pPasswordFile);
-            if ( passwdFile != null )
-                passwordFile(passwdFile);
-            String realmStr = GraphUtils.getAsStringValue(server, FusekiVocab.pRealm);
-            if ( realmStr != null )
-                realm(realmStr);
         }
 
         /**
@@ -861,6 +872,16 @@ public class FusekiServer {
             this.realm = realm;
             return this;
         }
+
+//        /**
+//         * Set the verifier for bearer tokens when auth scheme is {@link AuthScheme#BEARER}.
+//         * The auth scheme is set to "Bearer" by this method.
+//         */
+//        public Builder bearerAuthVerifier(Function<String, String> verifiedUser) {
+//            this.auth(AuthScheme.BEARER);
+//            this.bearerVerifiedUser = verifiedUser;
+//            return this;
+//        }
 
         /**
          * Set the password file. This will be used to build a {@link #securityHandler
@@ -981,9 +1002,7 @@ public class FusekiServer {
             return this;
         }
 
-        /**
-         * Add a servlet attribute. Pass a value of null to remove any existing binding.
-         */
+        /** Add a servlet attribute. Pass a value of null to remove any existing binding. */
         public Builder addServletAttribute(String attrName, Object value) {
             requireNonNull(attrName, "attrName");
             if ( value != null )
@@ -994,13 +1013,21 @@ public class FusekiServer {
         }
 
         /**
+         * Read a servlet attribute that has been set during building this server.
+         */
+        public Object getServletAttribute(String attrName) {
+            requireNonNull(attrName, "attrName");
+            return servletAttr.get(attrName);
+        }
+
+        /**
          * Add a filter with the pathSpec. Note that Fuseki dispatch uses a servlet filter
          * which is the last in the filter chain.
          */
         public Builder addFilter(String pathSpec, Filter filter) {
             requireNonNull(pathSpec, "pathSpec");
             requireNonNull(filter, "filter");
-            filters.add(Pair.create(pathSpec, filter));
+            beforeFilters.add(Pair.create(pathSpec, filter));
             return this;
         }
 
@@ -1132,6 +1159,20 @@ public class FusekiServer {
             return this;
         }
 
+        // Placeholder for the future.
+        // Not currently used (servlet attributes in the ServletContext may be more appropriate for many uses)
+//        /** Set context value. */
+//        public void context(Symbol symbol, Object value) {
+//            if ( context == null )
+//                context = new Context();
+//            context.set(symbol, value);
+//        }
+//
+//        /** Return the context (may be null) */
+//        public Context context() {
+//            return context;
+//        }
+
         /**
          * Shortcut: build, then start the server.
          */
@@ -1208,8 +1249,6 @@ public class FusekiServer {
         }
 
         private ConstraintSecurityHandler buildSecurityHandler() {
-            if ( passwordFile == null )
-                return null;
             UserStore userStore = JettyLib.makeUserStore(passwordFile);
             return JettyLib.makeSecurityHandler(realm, userStore, authScheme);
         }
@@ -1284,11 +1323,28 @@ public class FusekiServer {
 
         /** Do some checking to make sure setup is consistent. */
         private void validate() {
-            if ( ! hasAuthenticationHandler ) {
+            if ( ! hasAuthenticationHandler && authScheme != AuthScheme.BEARER ) {
                 if ( authenticateUser )
-                    Fuseki.configLog.warn("Authetication of users required (e.g. 'allowedUsers' is set) but there is no authentication setup (e.g. password file)");
+                    Fuseki.configLog.warn("Authentication of users required (e.g. 'allowedUsers' is set) but there is no authentication setup (e.g. password file)");
                 if ( hasDataAccessControl )
                     Fuseki.configLog.warn("Data-level access control in the configuration but there is no authentication setup (e.g. password file)");
+            }
+            if ( authScheme != null ) {
+                switch(authScheme) {
+                    case BASIC:
+                    case DIGEST:
+                        // Authentication style set but no authentication setup.
+                        // Unsecured server. Don't continue.
+                        if ( passwordFile == null && securityHandler == null )
+                            throw new FusekiConfigException("Authentication scheme set but no password file");
+                        break;
+                    case BEARER:
+//                        if ( bearerVerifiedUser == null )
+//                            throw new FusekiConfigException("Bearer authentication set but no function to get the verified user");
+                        break;
+                    case UNKNOWN:
+                        throw new FusekiConfigException("Unknown authentication scheme");
+                }
             }
         }
 
@@ -1405,7 +1461,10 @@ public class FusekiServer {
                 addFilterHolder(context, "/*", holder);
             }
 
-            // End of chain. May dispatch and not pass on requests.
+            beforeFilters.forEach(pair -> addFilter(context, pair.getLeft(), pair.getRight()));
+
+            // End of chain though there may be custom "afterFilters".
+            // This servlet filter may dispatch and not pass on requests.
             // Looks for any URL that starts with a dataset name.
             FusekiFilter ff = new FusekiFilter();
             addFilter(context, "/*", ff);
@@ -1423,7 +1482,7 @@ public class FusekiServer {
                 addServlet(context, "/$/tasks/*", new ActionTasks());
 
             servlets.forEach((pathspecp, servlet) -> addServlet(context, pathspecp, servlet));
-            filters.forEach(pair -> addFilter(context, pair.getLeft(), pair.getRight()));
+            afterFilters.forEach(pair -> addFilter(context, pair.getLeft(), pair.getRight()));
 
             // Finally, drop to state content if configured.
             if ( staticContentDir != null ) {

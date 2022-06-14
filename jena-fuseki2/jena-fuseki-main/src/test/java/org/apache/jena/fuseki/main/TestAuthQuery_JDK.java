@@ -65,14 +65,13 @@ public class TestAuthQuery_JDK extends AbstractTestAuth_JDK {
             Assert.assertTrue(qe.execAsk());
         } finally {
             AuthEnv.get().unregisterUsernamePassword(uri);
-            //AuthEnv.get().clearAuthRequestModifiers();
         }
     }
 
     @Test
     public void query_authenv_02_prefix_good() {
         QueryExecutionHTTP qe = QueryExecutionHTTP.create().endpoint(databaseURL()).query("ASK { }").build();
-        // Dataset URL.
+        // Server URL - a prefix.
         String dsURL = serverURL;
         URI uri = URI.create(dsURL);
         AuthEnv.get().registerUsernamePassword(uri, "allowed", "password");
