@@ -117,6 +117,16 @@ public class SearchEnvelope {
         return features;
     }
 
+    public HashSet<Resource> check(SpatialIndex spatialIndex, String graph) {
+        HashSet<Resource> features = spatialIndex.query(mainEnvelope, graph);
+
+        if (wrapEnvelope != null) {
+            HashSet<Resource> wrapFeatures = spatialIndex.query(wrapEnvelope, graph);
+            features.addAll(wrapFeatures);
+        }
+        return features;
+    }
+
     public boolean check(Envelope envelope) {
         boolean result = mainEnvelope.intersects(envelope);
 
