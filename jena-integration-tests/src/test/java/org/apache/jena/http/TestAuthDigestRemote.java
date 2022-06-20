@@ -18,9 +18,6 @@
 
 package org.apache.jena.http;
 
-import static org.apache.jena.fuseki.test.HttpTest.expect401;
-import static org.junit.Assert.assertNotNull;
-
 import java.net.URI;
 import java.util.Objects;
 
@@ -29,32 +26,48 @@ import org.apache.jena.atlas.web.AuthScheme;
 import org.apache.jena.fuseki.auth.Auth;
 import org.apache.jena.fuseki.jetty.JettyLib;
 import org.apache.jena.fuseki.main.FusekiServer;
-import org.apache.jena.graph.Graph;
 import org.apache.jena.http.auth.AuthEnv;
 import org.apache.jena.sparql.core.DatasetGraph;
 import org.apache.jena.sparql.core.DatasetGraphFactory;
-import org.apache.jena.sparql.exec.QueryExec;
-import org.apache.jena.sparql.exec.http.GSP;
-import org.apache.jena.sparql.exec.http.QueryExecHTTP;
 import org.eclipse.jetty.security.SecurityHandler;
 import org.eclipse.jetty.security.UserStore;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
 /**
  * Digest authentication.
- * Digest auth is not provided by java.net.http.
+ * Digest auth is not provided by java.net.http,
+ * so {@code Authenticator} on the {@code HttpClient} does not work.
  * Jena has to implement it itself (in AuthLib).
  */
-public class TestAuthDigestRemote {
+public class TestAuthDigestRemote extends AbstractTestAuthRemote {
     private static String user = "user";
     private static String password = "password";
 
     private static FusekiServer server = null;
     private static String dsEndpoint;
     private static URI dsEndpointURI;
+
+    @Override
+    protected String endpoint() {
+        return dsEndpoint;
+    }
+
+    @Override
+    protected URI endpointURI() {
+        return dsEndpointURI;
+    }
+
+    @Override
+    protected String user() {
+        return user;
+    }
+
+    @Override
+    protected String password() {
+        return password;
+    }
 
     @BeforeClass public static void beforeClass() {
         server = server("/ds", DatasetGraphFactory.createTxnMem(), user, password);
@@ -97,89 +110,5 @@ public class TestAuthDigestRemote {
         } catch (Throwable th) {
             Log.warn(TestAuthDigestRemote.class, "Exception in test suite shutdown", th);
         }
-    }
-
-    // ---- QueryExecHTTP
-
-    @Test
-    public void auth_disgest_qe_no_auth() {
-        expect401(()->{
-            try ( QueryExec qexec = QueryExecHTTP.newBuilder()
-                    .endpoint(dsEndpoint)
-                    .queryString("ASK{}")
-                    .build()) {
-                qexec.ask();
-            }
-        });
-    }
-
-//    @Test
-//    public void auth_disgest_qe_good_auth() {
-//        // Digest auth does not work with java.net.http.
-//        // Jena has to implement it itself (in AuthLib).
-//        Authenticator authenticator = AuthLib.authenticator(user, password);
-//        HttpClient hc = HttpClient.newBuilder().authenticator(authenticator).build();
-//
-//        expect401(()->{
-//            try ( QueryExec qexec = QueryExecHTTP.newBuilder()
-//                    .httpClient(hc)
-//                    .endpoint(dsEndpoint)
-//                    .queryString("ASK{}")
-//                    .build()) {
-//                qexec.ask();
-//            }
-//        });
-//    }
-
-    @Test
-    public void auth_disgest_qe_good_registered() {
-        // Digest only work via AuthEnv.
-        AuthEnv.get().registerUsernamePassword(dsEndpointURI, user, password);
-
-        try ( QueryExec qexec = QueryExecHTTP.newBuilder()
-                //.httpClient(hc)
-                .endpoint(dsEndpoint)
-                .queryString("ASK{}")
-                .build()) {
-            qexec.ask();
-        }
-    }
-
-    @Test
-    public void auth_disgest_qe_bad_registered() {
-        expect401(()->{
-            AuthEnv.get().registerUsernamePassword(dsEndpointURI, "wrong-user", password);
-            try ( QueryExec qexec = QueryExecHTTP.newBuilder()
-                    .endpoint(dsEndpoint)
-                    .queryString("ASK{}")
-                    .build()) {
-                qexec.ask();
-            }
-        });
-    }
-
-
-    // ---- GSP
-
-    @Test
-    public void auth_gsp_no_auth() {
-        expect401(()->{
-            GSP.service(dsEndpoint).defaultGraph().GET();
-        });
-    }
-
-    @Test
-    public void auth_gsp_good_registered() {
-        AuthEnv.get().registerUsernamePassword(dsEndpointURI, user, password);
-        Graph graph = GSP.service(dsEndpoint).defaultGraph().GET();
-        assertNotNull(graph);
-    }
-
-    @Test
-    public void auth_gsp_bad_registered() {
-        AuthEnv.get().registerUsernamePassword(dsEndpointURI, "wrong-user", password);
-        expect401(()->{
-            GSP.service(dsEndpoint).defaultGraph().GET();
-        });
     }
 }

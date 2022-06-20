@@ -1409,10 +1409,10 @@ Expr BuiltInCall() : { Expr expr ;
     { return new E_Datatype(expr) ; }
   | <BOUND> <LPAREN> gn = Var() <RPAREN>
     { return new E_Bound(new ExprVar(gn)) ; }
-  | <IRI> <LPAREN> expr = Expression() <RPAREN>
-    { return new E_IRI(expr) ; }
-  | <URI> <LPAREN> expr = Expression() <RPAREN>
-    { return new E_URI(expr) ; }
+  | <IRI> <LPAREN> expr1 = Expression() (<COMMA> expr2 = Expression())? <RPAREN>
+    { return makeFunction_IRI(expr1, expr2) ; }
+  | <URI> <LPAREN> expr1 = Expression() (<COMMA> expr2 = Expression())? <RPAREN>
+    { return makeFunction_URI(expr1, expr2) ; }
   | <BNODE>
     ( <LPAREN> expr1 = Expression() <RPAREN>
       { return new E_BNode(expr1) ; }
@@ -1496,7 +1496,7 @@ Expr BuiltInCall() : { Expr expr ;
   | <IS_TRIPLE> <LPAREN> expr = Expression() <RPAREN>
     { return new E_IsTriple(expr) ; }
   | <TRIPLE> <LPAREN> expr1 = Expression() <COMMA> expr2 = Expression() <COMMA> expr3 = Expression() <RPAREN>
-    { return new E_TripleTerm(expr1, expr2, expr3) ; }
+    { return new E_TripleFn(expr1, expr2, expr3) ; }
   | <SUBJECT> <LPAREN> expr = Expression() <RPAREN>
     { return new E_TripleSubject(expr) ; }
   | <PREDICATE> <LPAREN> expr = Expression() <RPAREN>

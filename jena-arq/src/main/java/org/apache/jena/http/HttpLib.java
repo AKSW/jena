@@ -95,6 +95,18 @@ public class HttpLib {
     }
 
     /**
+     * Calculate bearer auth header value.
+     * The token supplied is expected to already be in base 64.
+     * Use with header "Authorization" (constant {@link HttpNames#hAuthorization}).
+     */
+    public static String bearerAuth(String tokenBase64) {
+        Objects.requireNonNull(tokenBase64);
+        if ( tokenBase64.indexOf(' ') >= 0 )
+            throw new IllegalArgumentException("Base64 token contains a space");
+        return "Bearer " + tokenBase64;
+    }
+
+    /**
      * Get the InputStream from an HttpResponse, handling possible compression settings.
      * The application must consume or close the {@code InputStream} (see {@link #finish(InputStream)}).
      * Closing the InputStream may close the HTTP connection.
@@ -308,13 +320,8 @@ public class HttpLib {
 
     // Terminology:
     // RFC 2616:   Request-Line   = Method SP Request-URI SP HTTP-Version CRLF
-
     // RFC 7320:   request-line   = method SP request-target SP HTTP-version CRLF
     // https://datatracker.ietf.org/doc/html/rfc7230#section-3.1.1
-
-    // request-target:
-    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.3
-    // When it is for the origin server ==> absolute-path [ "?" query ]
 
     // EndpointURI: URL for a service, no query string.
 
@@ -328,11 +335,13 @@ public class HttpLib {
     }
 
     /**
-     * Return a string (assumed to be a URI) without query string or fragment.
+     * Return a string (assumed to be an absolute URI) without query string or fragment.
      */
     public static String endpoint(String uriStr) {
         int idx1 = uriStr.indexOf('?');
-        int idx2 = uriStr.indexOf('#');
+        // Assuming a well-formed URI string, it is path-query-fragment
+        // so if there is a query string, don't need to look for a fragment.
+        int idx2 = (idx1<0) ? uriStr.indexOf('#') : -1;
 
         if ( idx1 < 0 && idx2 < 0 )
             return uriStr;
@@ -347,27 +356,38 @@ public class HttpLib {
         return uriStr.substring(0, idx);
     }
 
-    /** RFC7320 "request-target", used in digest authentication. */
-    public static String requestTarget(URI uri) {
-        String path = uri.getRawPath();
-        if ( path == null || path.isEmpty() )
-            path = "/";
-        String qs = uri.getQuery();
-        if ( qs == null || qs.isEmpty() )
-            return path;
-        return path+"?"+qs;
-    }
-
     /** URI, without query string and fragment. */
     public static URI endpointURI(URI uri) {
         if ( uri.getRawQuery() == null && uri.getRawFragment() == null )
             return uri;
         try {
-            // Same URI except without query strinf an fragment.
+            // Same URI components except without query string and fragment.
             return new URI(uri.getScheme(), uri.getRawAuthority(), uri.getRawPath(), null, null);
         } catch (URISyntaxException x) {
             throw new IllegalArgumentException(x.getMessage(), x);
         }
+    }
+
+    /**
+     * The "request target" for digest auth. The server-side name of a resource - no
+     * authority (the host part).
+     * <p>
+     * RFC 7616 (digest auth), section 3.4 The Effective Request URI (Section 5.5 of RFC7230).
+     * <p>
+     * For SPARQL, the target is the service, not a resource
+     * named by the uri+query string.
+     * <p>
+     * This makes query-by-GET and query-by-POST work the same way.
+     */
+    public static String requestTargetServer(URI uri) {
+        // RFC 7230 5.5
+        //   If the request-target is in authority-form or asterisk-form, the
+        //   effective request URI's combined path and query component is
+        //   empty.
+        String path = uri.getRawPath();
+        if ( path == null || path.isEmpty() )
+            path = "/";
+        return path;
     }
 
     /** Return a HttpRequest */
@@ -513,7 +533,6 @@ public class HttpLib {
      * @param bodyHandler
      * @return HttpResponse
      */
-    public
     /*package*/ static <X> HttpResponse<X> execute(HttpClient httpClient, HttpRequest httpRequest, BodyHandler<X> bodyHandler) {
         // To run with no jena-supplied authentication handling.
         if ( false )
@@ -524,18 +543,22 @@ public class HttpLib {
         AuthEnv authEnv = AuthEnv.get();
 
         if ( uri.getUserInfo() != null ) {
-            String[] up = uri.getUserInfo().split(":");
-            if ( up.length == 2 ) {
+            String[] userpasswd = uri.getUserInfo().split(":");
+            if ( userpasswd.length == 2 ) {
+                // User info in the URI is not a good idea.
                 // Only if "user:password@host", not "user@host"
                 key = HttpLib.endpointURI(uri);
-                // The auth key will be with u:p making it specific.
-                authEnv.registerUsernamePassword(key, up[0], up[1]);
+                // The auth key will include user:password making it specific.
+                authEnv.registerUsernamePassword(key, userpasswd[0], userpasswd[1]);
             }
         }
         try {
             return AuthLib.authExecute(httpClient, httpRequest, bodyHandler);
         } finally {
             if ( key != null )
+                // The AuthEnv is "per tenant".
+                // Temporary registration within the AuthEnv of the
+                // user:password is acceptable.
                 authEnv.unregisterUsernamePassword(key);
         }
     }
@@ -616,7 +639,7 @@ public class HttpLib {
     }
 
     /**
-     * Allow setting additional/optional query parameters on a per remote service (including for SERVICE).
+     * Allow setting additional/optional HTTP headers and query parameters on a per remote service (including for SERVICE) basis.
      * <ul>
      * <li>ARQ.httpRequestModifer - the specific modifier</li>
      * <li>ARQ.httpRegistryRequestModifer - the registry, keyed by service URL.</li>

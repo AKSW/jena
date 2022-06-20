@@ -41,7 +41,9 @@ import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.engine.QueryIterator;
 import org.apache.jena.sparql.engine.binding.Binding;
 import org.apache.jena.sparql.engine.binding.BindingFactory;
-import org.apache.jena.sparql.engine.iterator.*;
+import org.apache.jena.sparql.engine.iterator.QueryIterNullIterator;
+import org.apache.jena.sparql.engine.iterator.QueryIterPlainWrapper;
+import org.apache.jena.sparql.engine.iterator.QueryIterSingleton;
 import org.apache.jena.sparql.expr.ExprEvalException;
 import org.apache.jena.sparql.pfunction.PFuncSimpleAndList;
 import org.apache.jena.sparql.pfunction.PropFuncArg;
@@ -94,7 +96,7 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         }
 
         if (subject.isVariable()) {
-            return checkUnbound2(binding, execCxt, subject, limit);
+            return checkUnbound(binding, execCxt, subject, limit);
         } else {
             //Subject is not a variable (and not a URI or Blank - tested earlier).
             throw new ExprEvalException("Not a URI, Blank or variable: " + FmtUtils.stringForNode(subject));
@@ -175,43 +177,6 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
     protected abstract boolean requireSecondFilter();
 
     private QueryIterator checkUnbound(Binding binding, ExecutionContext execCxt, Node subject, int limit) {
-
-        QueryIterConcat queryIterConcat = new QueryIterConcat(execCxt);
-        if (limit < 0) {
-            limit = Integer.MAX_VALUE;
-        }
-
-        //Find all Features in the spatial index which are within the rough search envelope.
-        SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
-        HashSet<Resource> features = searchEnvelope.check(spatialIndex);
-
-        Var subjectVar = Var.alloc(subject.getName());
-        int count = 0;
-        for (Resource feature : features) {
-
-            boolean isMatched;
-
-            if (requireSecondFilter()) {
-                //Check all the GeometryLiterals of the Feature in a fine-grained test.
-                isMatched = checkBound(execCxt, feature.asNode());
-            } else {
-                //Second filter is not required so accept the case.
-                isMatched = true;
-            }
-
-            if (isMatched) {
-                count++; //Exit on limit of zero.
-                if (count > limit) {
-                    break;
-                }
-                QueryIterator queryIter = QueryIterSingleton.create(binding, subjectVar, feature.asNode(), execCxt);
-                queryIterConcat.add(queryIter);
-            }
-        }
-        return queryIterConcat;
-    }
-
-    private QueryIterator checkUnbound2(Binding binding, ExecutionContext execCxt, Node subject, int limit) {
 
         if (limit < 0) {
             limit = Integer.MAX_VALUE;

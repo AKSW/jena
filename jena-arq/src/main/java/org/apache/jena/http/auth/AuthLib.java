@@ -18,6 +18,8 @@
 
 package org.apache.jena.http.auth;
 
+import static org.apache.jena.http.auth.DigestLib.digestAuthModifier;
+
 import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.http.HttpClient;
@@ -26,13 +28,13 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.util.List;
 
+import org.apache.jena.atlas.web.AuthScheme;
 import org.apache.jena.atlas.web.HttpException;
 import org.apache.jena.http.HttpLib;
 import org.apache.jena.riot.web.HttpNames;
 import org.apache.jena.web.HttpSC;
 
 public class AuthLib {
-
     /**
      * Call {@link HttpClient#send} after applying an active {@link AuthRequestModifier}
      * to modify the {@link java.net.http.HttpRequest.Builder}.
@@ -55,22 +57,88 @@ public class AuthLib {
         return httpResponse2;
     }
 
+    /* Handle a 401 (authentication challenge). */
+    private static <T> HttpResponse<T> handle401(HttpClient httpClient,
+                                                 HttpRequest request,
+                                                 BodyHandler<T> bodyHandler,
+                                                 HttpResponse<T> httpResponse401) {
+        AuthChallenge aHeader = wwwAuthenticateHeader(httpResponse401);
+        if ( aHeader == null )
+            // No valid header - simply return the original response.
+            return httpResponse401;
+
+        // Currently on a URI endpoint-by-endpoint basis.
+        // String realm = aHeader.getRealm();
+        // AuthDomain domain = new AuthDomain(request.uri(), realm);
+
+        PasswordRecord passwordRecord = null;
+        if ( aHeader.authScheme == AuthScheme.BASIC || aHeader.authScheme == AuthScheme.DIGEST ) {
+            passwordRecord = AuthEnv.get().getUsernamePassword(request.uri());
+            if ( passwordRecord == null )
+                // No entry.
+                throw new HttpException(HttpSC.UNAUTHORIZED_401);
+        }
+
+        // Request target - no query string.
+        AuthRequestModifier authRequestModifier;
+        switch (aHeader.authScheme) {
+            case BASIC :
+                authRequestModifier = basicAuthModifier(passwordRecord.getUsername(), passwordRecord.getPassword());
+                break;
+            case DIGEST : {
+                String requestTarget = HttpLib.requestTargetServer(request.uri());
+                authRequestModifier = digestAuthModifier(aHeader, passwordRecord.getUsername(), passwordRecord.getPassword(),
+                                                         request.method(), requestTarget);
+                break;
+            }
+            case BEARER : {
+                // Challenge
+                String requestTarget = HttpLib.endpoint(request.uri().toString());
+                authRequestModifier = bearerAuthModifier(requestTarget, aHeader);
+                break;
+            }
+            case UNKNOWN :
+                // Not handled. Pass back the 401.
+                return httpResponse401;
+            default:
+                throw new HttpException("Not an authentication scheme -- "+aHeader.authScheme);
+        }
+
+        // Failed to generate a request modifier for a retry.
+        if ( authRequestModifier == null)
+            return httpResponse401;
+
+        // ---- Register for next time the app calls this URI.
+        AuthEnv.get().registerAuthModifier(request.uri().toString(), authRequestModifier);
+
+        // ---- Call with modified request
+        HttpRequest.Builder request2builder = HttpLib.createBuilder(request);
+        request2builder = authRequestModifier.addAuth(request2builder);
+
+        HttpRequest httpRequest2 = request2builder.build();
+        HttpResponse<T> httpResponse2 = HttpLib.executeJDK(httpClient, httpRequest2, bodyHandler);
+        // Pass back to application regardless of response code.
+        return httpResponse2;
+    }
+
     /**
      * Choose the first Digest auth header, else first Basic auth header.
      */
-    private static AuthChallenge authenticateHeader(HttpResponse<?> httpResponse) {
+    private static AuthChallenge wwwAuthenticateHeader(HttpResponse<?> httpResponse) {
         List<String> headers = httpResponse.headers().allValues("WWW-Authenticate");
         if ( headers.size() == 0 )
             return null;
-        // Choose first digest or first basic.
+        // Choose first digest or bearer, else the first basic. Prefer digest or bearer to basic.
         AuthChallenge aHeader = null;
         String result = null;
         for ( String headerValue : headers ) {
             AuthChallenge aHeader2 = AuthChallenge.parse(headerValue);
-            if ( aHeader2 == null )
+            if ( aHeader2 == null ) {
                 AuthEnv.LOG.warn("Bad authentication response - ignored: "+headerValue);
-            // Prefer Digest
-            switch(aHeader2.authScheme) {
+                return null;
+            }
+            AuthScheme authScheme = aHeader2.authScheme;
+            switch(authScheme) {
                 case  DIGEST :
                     return aHeader2;
                 case BASIC:
@@ -78,54 +146,17 @@ public class AuthLib {
                         // Choose first Basic auth for now - there may also be a Digest.
                         aHeader = aHeader2;
                     break;
+                case BEARER:
+                    return aHeader2;
+                case UNKNOWN:
+                    AuthEnv.LOG.warn("Authentication required: "+authScheme);
+                    break;
                 default:
                     AuthEnv.LOG.warn("Unrecogized authentication response - ignored: "+headerValue);
+                    break;
             }
         }
         return aHeader;
-    }
-
-    /* Handle a 401 (Basic and Digest) authentication challenge. */
-    private static <T> HttpResponse<T> handle401(HttpClient httpClient,
-                                                 HttpRequest request,
-                                                 BodyHandler<T> bodyHandler,
-                                                 HttpResponse<T> httpResponse1) {
-        AuthChallenge aHeader = authenticateHeader(httpResponse1);
-        if ( aHeader == null )
-            // No valid header - simply return the original response.
-            return httpResponse1;
-
-        AuthDomain domain = new AuthDomain(request.uri());
-        PasswordRecord passwordRecord = AuthEnv.get().getUsernamePassword(request.uri());
-        if ( passwordRecord == null )
-            // No entry.
-            throw new HttpException(HttpSC.UNAUTHORIZED_401);
-
-        AuthRequestModifier digestAuthModifier;
-        switch (aHeader.authScheme) {
-            case BASIC :
-                digestAuthModifier = basicAuthModifier(passwordRecord.getUsername(), passwordRecord.getPassword());
-                break;
-            case DIGEST : {
-                String requestTarget = HttpLib.requestTarget(request.uri());
-                digestAuthModifier = DigestLib.buildDigest(aHeader,
-                                                           passwordRecord.getUsername(), passwordRecord.getPassword(),
-                                                           request.method(), requestTarget);
-                break;
-            }
-            default:
-                throw new HttpException("Not an authentication scheme -- "+aHeader.authScheme);
-        }
-        String endpointURL = HttpLib.requestTarget(request.uri());
-        AuthEnv.get().registerAuthModifier(endpointURL, digestAuthModifier);
-
-        // ---- Call with modifier or fail.
-        HttpRequest.Builder request2builder = HttpLib.createBuilder(request);
-        request2builder = digestAuthModifier.addAuth(request2builder);
-        // Try once more.
-        HttpRequest httpRequest2 = request2builder.build();
-        HttpResponse<T> httpResponse2 = HttpLib.executeJDK(httpClient, httpRequest2, bodyHandler);
-        return httpResponse2;
     }
 
     /**
@@ -133,6 +164,21 @@ public class AuthLib {
      */
     /*package*/ static AuthRequestModifier basicAuthModifier(String user, String password) {
         return req->req.setHeader(HttpNames.hAuthorization, HttpLib.basicAuth(user, password));
+    }
+
+
+    /**
+     * Create an {@link AuthRequestModifier} that supplies the token bearer auth.
+     * Return null for reject challenge (401 returned to application).
+     */
+    private static AuthRequestModifier bearerAuthModifier(String remoteService, AuthChallenge aHeader) {
+        String token = AuthEnv.get().getBearerToken(remoteService, aHeader);
+        if ( token == null )
+            return null;
+        if ( token.contains(" ") ) {
+            throw new AuthException("Bad token - contains spaces");
+        }
+        return builder->builder.setHeader(HttpNames.hAuthorization, "Bearer "+token);
     }
 
     /**
