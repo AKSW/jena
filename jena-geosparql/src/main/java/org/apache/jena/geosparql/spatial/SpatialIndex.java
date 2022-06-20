@@ -22,9 +22,11 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
+import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.implementation.GeometryWrapper;
 import org.apache.jena.geosparql.implementation.SRSInfo;
@@ -48,6 +50,8 @@ import org.opengis.util.FactoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.stream.Collectors.groupingBy;
+
 /**
  * SpatialIndex for testing bounding box collisions between geometries within a
  * Dataset.<br>
@@ -66,6 +70,9 @@ public class SpatialIndex {
     private transient final SRSInfo srsInfo;
     private boolean isBuilt;
     private final STRtree strTree;
+
+    private final Map<String, STRtree> indexTrees;
+
     private static final int MINIMUM_CAPACITY = 2;
 
     private SpatialIndex() {
@@ -73,6 +80,7 @@ public class SpatialIndex {
         this.isBuilt = true;
         this.strTree.build();
         this.srsInfo = SRSRegistry.getSRSInfo(SRS_URI.DEFAULT_WKT_CRS84);
+        this.indexTrees = Collections.emptyMap();
     }
 
     /**
@@ -82,10 +90,11 @@ public class SpatialIndex {
      * @param srsURI
      */
     public SpatialIndex(int capacity, String srsURI) {
-        int indexCapacity = capacity < MINIMUM_CAPACITY ? MINIMUM_CAPACITY : capacity;
+        int indexCapacity = Math.max(capacity, MINIMUM_CAPACITY);
         this.strTree = new STRtree(indexCapacity);
         this.isBuilt = false;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
+        this.indexTrees = Collections.emptyMap();
     }
 
     /**
@@ -96,10 +105,34 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public SpatialIndex(Collection<SpatialIndexItem> spatialIndexItems, String srsURI) throws SpatialIndexException {
-        int indexCapacity = spatialIndexItems.size() < MINIMUM_CAPACITY ? MINIMUM_CAPACITY : spatialIndexItems.size();
+        // named graphs
+        Map<String, List<SpatialIndexItemGraph>> graphToItems = spatialIndexItems.stream()
+                .filter(SpatialIndexItemGraph.class::isInstance)
+                .map(SpatialIndexItemGraph.class::cast)
+                .collect(groupingBy(SpatialIndexItemGraph::getGraphURI));
+
+        this.indexTrees = new HashMap<>();
+        graphToItems.forEach((g, items) -> {
+            STRtree tree = new STRtree(items.size());
+            try {
+                insertItems(tree, items);
+            } catch (SpatialIndexException e) {
+                throw new RuntimeException(e);
+            }
+            tree.build();
+            indexTrees.put(g, tree);
+        });
+
+        // default graph
+        List<SpatialIndexItem> defaultGraphItems = spatialIndexItems.stream()
+                .filter(item -> !(item instanceof SpatialIndexItemGraph))
+                .collect(Collectors.toList());
+
+        int indexCapacity = Math.max(defaultGraphItems.size(), MINIMUM_CAPACITY);
         this.strTree = new STRtree(indexCapacity);
-        insertItems(spatialIndexItems);
+        insertItems(defaultGraphItems);
         this.strTree.build();
+
         this.isBuilt = true;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
@@ -144,6 +177,33 @@ public class SpatialIndex {
      * @param indexItems
      * @throws SpatialIndexException
      */
+    public final void insertItems(STRtree tree, Collection<? extends SpatialIndexItem> indexItems) throws SpatialIndexException {
+        for (SpatialIndexItem indexItem : indexItems) {
+            insertItem(tree, indexItem.getEnvelope(), indexItem.getItem());
+        }
+    }
+
+    /**
+     * Item to add to an unbuilt Spatial Index.
+     *
+     * @param envelope
+     * @param item
+     * @throws SpatialIndexException
+     */
+    public final void insertItem(STRtree tree, Envelope envelope, Resource item) throws SpatialIndexException {
+        if (!isBuilt) {
+            tree.insert(envelope, item);
+        } else {
+            throw new SpatialIndexException("SpatialIndex has been built and cannot have additional items.");
+        }
+    }
+
+    /**
+     * Items to add to an unbuilt Spatial Index.
+     *
+     * @param indexItems
+     * @throws SpatialIndexException
+     */
     public final void insertItems(Collection<SpatialIndexItem> indexItems) throws SpatialIndexException {
 
         for (SpatialIndexItem indexItem : indexItems) {
@@ -168,8 +228,22 @@ public class SpatialIndex {
 
     @SuppressWarnings("unchecked")
     public HashSet<Resource> query(Envelope searchEnvelope) {
+        LOGGER.debug("spatial index lookup on default graph");
         if (!strTree.isEmpty()) {
             return new HashSet<>(strTree.query(searchEnvelope));
+        } else {
+            return new HashSet<>();
+        }
+    }
+
+    public HashSet<Resource> query(Envelope searchEnvelope, String graph) {
+        LOGGER.debug("spatial index lookup on graph: " + graph);
+        if (!indexTrees.containsKey(graph)) {
+            LOGGER.warn("graph not indexed: " + graph);
+        }
+        STRtree tree = indexTrees.get(graph);
+        if (tree != null && !tree.isEmpty()) {
+            return new HashSet<>(tree.query(searchEnvelope));
         } else {
             return new HashSet<>();
         }
@@ -304,6 +378,7 @@ public class SpatialIndex {
             String graphName = graphNames.next();
             Model namedModel = dataset.getNamedModel(graphName);
             Collection<SpatialIndexItem> graphItems = getSpatialIndexItems(namedModel, srsURI);
+            graphItems = graphItems.stream().map(item -> new SpatialIndexItemGraph(item, graphName)).collect(Collectors.toList());
             items.addAll(graphItems);
         }
 
@@ -483,7 +558,7 @@ public class SpatialIndex {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
             //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
             try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(spatialIndexFile))) {
-                SpatialIndexStorage storage = (SpatialIndexStorage) in.readObject();
+                SpatialIndexStorageGraph storage = (SpatialIndexStorageGraph) in.readObject();
 
                 SpatialIndex spatialIndex = storage.getSpatialIndex();
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
@@ -521,7 +596,7 @@ public class SpatialIndex {
         //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
         if (spatialIndexFile != null) {
             LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
-            SpatialIndexStorage storage = new SpatialIndexStorage(spatialIndexItems, srsURI);
+            SpatialIndexStorageGraph storage = new SpatialIndexStorageGraph(spatialIndexItems, srsURI);
             String filename = spatialIndexFile.getAbsolutePath();
             Path file = Path.of(filename);
             Path tmpFile = IOX.uniqueDerivedPath(file, null);

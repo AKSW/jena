@@ -29,6 +29,8 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
+import java.util.List;
+
 /**
  *
  *
@@ -73,6 +75,30 @@ public class SpatialIndexTestData {
                 spatialIndex.insertItem(HONOLULU_GEOMETRY_WRAPPER.getEnvelope(), HONOLULU_FEATURE);
                 spatialIndex.insertItem(PERTH_GEOMETRY_WRAPPER.getEnvelope(), PERTH_FEATURE);
                 spatialIndex.insertItem(AUCKLAND_GEOMETRY_WRAPPER.getEnvelope(), AUCKLAND_FEATURE);
+
+                spatialIndex.build();
+                TEST_SPATIAL_INDEX = spatialIndex;
+            } catch (SpatialIndexException ex) {
+
+            }
+        }
+
+        return TEST_SPATIAL_INDEX;
+    }
+
+    public static final SpatialIndex createTestIndexWithGraphs() {
+
+        if (TEST_SPATIAL_INDEX == null) {
+            try {
+                List<SpatialIndexItem> items = List.of(
+                        new SpatialIndexItemGraph(LONDON_GEOMETRY_WRAPPER.getEnvelope(), LONDON_FEATURE, "urn:g1"),
+                        new SpatialIndexItemGraph(NEW_YORK_GEOMETRY_WRAPPER.getEnvelope(), NEW_YORK_FEATURE, "urn:g1"),
+                        new SpatialIndexItemGraph(HONOLULU_GEOMETRY_WRAPPER.getEnvelope(), HONOLULU_FEATURE, "urn:g2"),
+                        new SpatialIndexItemGraph(PERTH_GEOMETRY_WRAPPER.getEnvelope(), PERTH_FEATURE, "urn:g2"),
+                        new SpatialIndexItemGraph(AUCKLAND_GEOMETRY_WRAPPER.getEnvelope(), AUCKLAND_FEATURE, "urn:g2")
+                );
+
+                SpatialIndex spatialIndex = new SpatialIndex(items, SRS_URI.WGS84_CRS);
 
                 spatialIndex.build();
                 TEST_SPATIAL_INDEX = spatialIndex;

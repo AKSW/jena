@@ -381,4 +381,21 @@ public class SearchEnvelopeTest {
         assertEquals(expResult, result);
     }
 
+    @Test
+    public void testCheckQuads() {
+
+        SpatialIndex spatialIndex = SpatialIndexTestData.createTestIndexWithGraphs();
+
+        //Search Envelope
+        GeometryWrapper geometryWrapper = SpatialIndexTestData.PARIS_GEOMETRY_WRAPPER;
+        float radius = 345;
+        String unitsURI = Unit_URI.KILOMETER_URL;
+        SearchEnvelope instance = SearchEnvelope.build(geometryWrapper, SpatialIndexTestData.WGS_84_SRS_INFO, radius, unitsURI);
+
+        //Function Test
+        HashSet<Resource> expResult = new HashSet<>(Arrays.asList(SpatialIndexTestData.LONDON_FEATURE));
+        HashSet<Resource> result = instance.check(spatialIndex, "urn:g1");
+        assertEquals(expResult, result);
+    }
+
 }
