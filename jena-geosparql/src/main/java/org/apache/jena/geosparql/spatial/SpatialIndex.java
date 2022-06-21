@@ -552,7 +552,7 @@ public class SpatialIndex {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
             //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
             try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(spatialIndexFile))) {
-                SpatialIndexStorage storage = (SpatialIndexStorage) in.readObject();
+                SpatialIndexStorageGraph storage = (SpatialIndexStorageGraph) in.readObject();
 
                 SpatialIndex spatialIndex = storage.getSpatialIndex();
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
@@ -590,7 +590,7 @@ public class SpatialIndex {
         //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
         if (spatialIndexFile != null) {
             LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
-            SpatialIndexStorage storage = new SpatialIndexStorage(spatialIndexItems, srsURI);
+            SpatialIndexStorageGraph storage = new SpatialIndexStorageGraph(spatialIndexItems, srsURI);
             String filename = spatialIndexFile.getAbsolutePath();
             Path file = Path.of(filename);
             Path tmpFile = IOX.uniqueDerivedPath(file, null);
