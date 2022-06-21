@@ -188,7 +188,7 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
         Graph activeGraph = execCxt.getActiveGraph();
         HashSet<Resource> features = (activeGraph instanceof NamedGraph && ((NamedGraph) activeGraph).getGraphName() != null)
-                ? searchEnvelope.check(spatialIndex, activeGraph.toString())
+                ? searchEnvelope.check(spatialIndex, ((NamedGraph) activeGraph).getGraphName().getURI())
                 : searchEnvelope.check(spatialIndex);
 
         Var subjectVar = Var.alloc(subject.getName());
