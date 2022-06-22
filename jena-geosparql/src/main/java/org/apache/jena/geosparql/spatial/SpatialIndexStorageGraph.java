@@ -42,7 +42,11 @@ public class SpatialIndexStorageGraph implements Serializable {
         this.storageItems = new ArrayList<>(spatialIndexItems.size());
 
         for (SpatialIndexItem spatialIndexItem : spatialIndexItems) {
-            StorageItemGraph storageItem = new StorageItemGraph(spatialIndexItem.getEnvelope(), spatialIndexItem.getItem());
+            String graph = null;
+            if (spatialIndexItem instanceof SpatialIndexItemGraph) {
+                graph = ((SpatialIndexItemGraph) spatialIndexItem).getGraphURI();
+            }
+            StorageItemGraph storageItem = new StorageItemGraph(spatialIndexItem.getEnvelope(), spatialIndexItem.getItem(), graph);
             storageItems.add(storageItem);
         }
     }
@@ -56,7 +60,7 @@ public class SpatialIndexStorageGraph implements Serializable {
         List<SpatialIndexItem> indexItems = new ArrayList<>(storageItems.size());
 
         for (StorageItemGraph storageItem : storageItems) {
-            SpatialIndexItemGraph indexItem = storageItem.getIndexItem();
+            SpatialIndexItem indexItem = storageItem.getIndexItem();
             indexItems.add(indexItem);
         }
 
@@ -71,7 +75,6 @@ public class SpatialIndexStorageGraph implements Serializable {
 
         private final Envelope envelope;
         private final String uri;
-
         private final String graphURI;
 
         public StorageItemGraph(Envelope envelope, Resource item) {
@@ -100,8 +103,10 @@ public class SpatialIndexStorageGraph implements Serializable {
             return ResourceFactory.createResource(uri);
         }
 
-        public SpatialIndexItemGraph getIndexItem() {
-            return new SpatialIndexItemGraph(envelope, getItem(), graphURI);
+        public SpatialIndexItem getIndexItem() {
+            return (graphURI == null)
+                    ? new SpatialIndexItem(envelope, getItem())
+                    : new SpatialIndexItemGraph(envelope, getItem(), graphURI);
         }
 
         @Override
