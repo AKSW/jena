@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
+import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.implementation.GeometryWrapper;
 import org.apache.jena.geosparql.implementation.SRSInfo;
@@ -235,6 +236,10 @@ public class SpatialIndex {
     }
 
     public HashSet<Resource> query(Envelope searchEnvelope, String graph) {
+        Log.info(SpatialIndex.class, "spatial index lookup on graph: " + graph);
+        if (!indexTrees.containsKey(graph)) {
+            Log.warn(SpatialIndex.class, "graph not indexed: " + graph);
+        }
         STRtree tree = indexTrees.get(graph);
         if (tree != null && !tree.isEmpty()) {
             return new HashSet<>(tree.query(searchEnvelope));
