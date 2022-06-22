@@ -228,6 +228,7 @@ public class SpatialIndex {
 
     @SuppressWarnings("unchecked")
     public HashSet<Resource> query(Envelope searchEnvelope) {
+        LOGGER.info("spatial index lookup on default graph");
         if (!strTree.isEmpty()) {
             return new HashSet<>(strTree.query(searchEnvelope));
         } else {
@@ -236,9 +237,9 @@ public class SpatialIndex {
     }
 
     public HashSet<Resource> query(Envelope searchEnvelope, String graph) {
-        Log.info(SpatialIndex.class, "spatial index lookup on graph: " + graph);
+        LOGGER.info( "spatial index lookup on graph: " + graph);
         if (!indexTrees.containsKey(graph)) {
-            Log.warn(SpatialIndex.class, "graph not indexed: " + graph);
+            LOGGER.warn( "graph not indexed: " + graph);
         }
         STRtree tree = indexTrees.get(graph);
         if (tree != null && !tree.isEmpty()) {
