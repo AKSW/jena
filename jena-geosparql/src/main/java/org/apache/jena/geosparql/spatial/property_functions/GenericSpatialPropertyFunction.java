@@ -188,8 +188,6 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         //Find all Features in the spatial index which are within the rough search envelope.
         SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
         Graph activeGraph = execCxt.getActiveGraph();
-        System.out.println(activeGraph);
-        Log.info(GenericSpatialPropertyFunction.class, "active graph:" + activeGraph);
         HashSet<Resource> features = (activeGraph instanceof NamedGraph && ((NamedGraph) activeGraph).getGraphName() != null)
                 ? searchEnvelope.check(spatialIndex, ((NamedGraph) activeGraph).getGraphName().getURI())
                 : searchEnvelope.check(spatialIndex);
