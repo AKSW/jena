@@ -16,20 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.jena.sparql.service;
+package org.apache.jena.sparql.core;
 
-import org.apache.jena.sparql.engine.QueryIterator;
-import org.apache.jena.sparql.engine.main.iterator.QueryIterService;
-import org.apache.jena.sparql.service.single.ServiceExecutor;
+public class TestDatasetGraphMap extends AbstractDatasetGraphTests {
 
-/**
- * Execution of a SERVICE clause in the context of {@link QueryIterService} applying an input binding.s
- * @see ServiceExecutor
- * @see ServiceExecutorRegistry
- *
- * @deprecated Deprecated in favor of QueryIterators that initialize lazily
- */
-@Deprecated(since = "4.6.0")
-public interface ServiceExecution {
-    public QueryIterator exec();
+    @Override
+    protected DatasetGraph emptyDataset() {
+        return new DatasetGraphMap();
+    }
 }
