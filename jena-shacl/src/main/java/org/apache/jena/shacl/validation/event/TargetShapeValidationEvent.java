@@ -16,24 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.jena.integration;
+package org.apache.jena.shacl.validation.event;
 
-import org.apache.jena.rdfconnection.Isolation;
-import org.apache.jena.rdflink.AbstractTestRDFLink;
-import org.apache.jena.rdflink.RDFLink;
-import org.apache.jena.rdflink.RDFLinkFactory;
-import org.apache.jena.sparql.core.DatasetGraph;
-import org.apache.jena.tdb2.DatabaseMgr;
+import org.apache.jena.shacl.parser.Shape;
 
-public class TestRDFLinkLocalTDB2 extends AbstractTestRDFLink {
+import java.util.Collection;
 
-    @Override
-    protected boolean supportsAbort() { return true ; }
-
-    @Override
-    protected RDFLink link() {
-        DatasetGraph dsg = DatabaseMgr.createDatasetGraph() ;
-        return RDFLinkFactory.connect(dsg, Isolation.COPY) ;
-    }
+public interface TargetShapeValidationEvent {
+    Collection<Shape> getTargetShapes();
 }
-

@@ -16,23 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.jena.integration;
+package org.apache.jena.shacl.validation.event;
 
-import org.apache.jena.rdflink.RDFLink;
-import org.apache.jena.rdflink.RDFLinkFactory;
-import org.apache.jena.rdflink.RDFLinkFuseki;
+import org.apache.jena.graph.Node;
 
-public class TestRDFLinkFuseki extends TestRDFLinkHTTP {
-    @Override
-    protected RDFLink link() {
-        return RDFLinkFactory.connectFuseki("http://localhost:"+PORT+"/ds");
-    }
+import java.util.Set;
 
-    @Override
-    protected boolean defaultToCheckQueries() { return false; }
-
-    @Override
-    protected RDFLink link(boolean parseCheckSPARQL) {
-        return RDFLinkFuseki.service("http://localhost:"+PORT+"/ds").parseCheckSPARQL(parseCheckSPARQL).build();
-    }
+public interface ConstraintEvaluationOnPathNodesEvent extends ConstraintEvaluationForPathEvent {
+    Set<Node> getValueNodes();
 }

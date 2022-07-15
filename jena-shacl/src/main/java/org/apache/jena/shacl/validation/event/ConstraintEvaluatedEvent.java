@@ -16,24 +16,17 @@
  * limitations under the License.
  */
 
-package org.apache.jena.integration;
+package org.apache.jena.shacl.validation.event;
 
-import org.apache.jena.rdfconnection.Isolation;
-import org.apache.jena.rdflink.AbstractTestRDFLink;
-import org.apache.jena.rdflink.RDFLink;
-import org.apache.jena.rdflink.RDFLinkFactory;
-import org.apache.jena.sparql.core.DatasetGraph;
-import org.apache.jena.tdb.TDBFactory ;
+import org.apache.jena.graph.Node;
 
-public class TestRDFLinkLocalTDB extends AbstractTestRDFLink {
+import java.util.Set;
 
-    @Override
-    protected boolean supportsAbort() { return true ; }
-
-    @Override
-    protected RDFLink link() {
-        DatasetGraph dsg = TDBFactory.createDatasetGraph() ;
-        return RDFLinkFactory.connect(dsg, Isolation.COPY) ;
-    }
+/**
+ * Type of events resulting from evaluating a constraint on a Set of value nodes or, in the case of constraints of a
+ * node shape, on a single value node.
+ */
+public interface ConstraintEvaluatedEvent extends ConstraintEvaluationEvent {
+    boolean isValid();
+    Set<Node> getValueNodes();
 }
-
