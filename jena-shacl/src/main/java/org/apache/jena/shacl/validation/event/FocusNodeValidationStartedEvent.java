@@ -16,23 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.jena.integration;
+package org.apache.jena.shacl.validation.event;
 
-import org.junit.runner.RunWith ;
-import org.junit.runners.Suite ;
+import org.apache.jena.graph.Node;
+import org.apache.jena.shacl.engine.ValidationContext;
+import org.apache.jena.shacl.parser.Shape;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses( {
-    // Done in the module
-    //    TestRDFLinkLocalTxnMem
-    //    TestRDFLinkLocalMRSW
+/**
+ * Event emitted when a focus node has been validated completely with regard to a shape.
+ */
+public class FocusNodeValidationStartedEvent extends AbstractFocusNodeValidationEvent implements ValidationLifecycleEvent {
+    public FocusNodeValidationStartedEvent(ValidationContext vCxt,
+                    Shape shape, Node focusNode) {
+        super(vCxt, shape, focusNode);
+    }
 
-    // Addition tests added here.
-    TestRDFLinkLocalTDB.class,
-    TestRDFLinkLocalTDB2.class,
-    TestRDFLinkHTTP.class,
-    TestRDFLinkFuseki.class,
-    TestRDFLinkFusekiBinary.class
-})
-
-public class TS_RDFLinkIntegration {}
+    @Override public String toString() {
+        return "FocusNodeValidationStartedEvent{" +
+                        "focusNode=" + focusNode +
+                        ", shape=" + shape +
+                        '}';
+    }
+}
