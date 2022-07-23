@@ -16,27 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.jena.sparql.expr;
+package org.apache.jena.dboe.transaction.txn;
 
-import org.apache.jena.sparql.expr.nodevalue.NodeFunctions ;
-import org.apache.jena.sparql.function.FunctionEnv ;
-import org.apache.jena.sparql.sse.Tags ;
+/**
+ * Base for transaction components that are added by external sub-systems.
+ */
+public class TransactionalComponentExternal<X> extends TransactionalComponentBase<X> {
 
-public class E_StrUUID extends ExprFunction0 implements Unstable
-{
-    static private String fName = Tags.tagStrUUID;
-
-    public E_StrUUID() {
-        super(fName);
+    public TransactionalComponentExternal(ComponentId id) {
+        super(id);
     }
 
-    @Override
-    public Expr copy() {
-        return new E_StrUUID();
-    }
-
-    @Override
-    public NodeValue eval(FunctionEnv env) {
-        return NodeFunctions.struuid();
-    }
+    /**
+     * Don't automatically clear the internal state which allows it to be carried
+     * across switching datasets (e.g. TDB2 compactions).
+     */
+    @Override protected void clearInternal() { }
 }
+
