@@ -42,6 +42,7 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
@@ -141,8 +142,9 @@ public class SpatialIndex {
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
 
-    public SpatialIndex(STRtree tree, boolean isBuilt, String srsURI) {
-        this.strTree = tree;
+    public SpatialIndex(STRtree defaultGraphTree, Map<String, STRtree> namedGraphIndexTrees, boolean isBuilt, String srsURI) {
+        this.strTree = defaultGraphTree;
+        this.indexTrees = namedGraphIndexTrees;
         this.isBuilt = isBuilt;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
@@ -604,8 +606,11 @@ public class SpatialIndex {
                 Output output = new Output(new FileOutputStream(spatialIndexFile));
                 output.writeString(srsInfo.getSrsURI());
                 output.writeBoolean(isBuilt);
-                SpatialIndexSerde serde = new SpatialIndexSerde();
-                serde.write(kryo, output, strTree);
+
+                kryo.writeObject(output, strTree);
+                kryo.writeClassAndObject(output, indexTrees);
+//                SpatialIndexSerde serde = new SpatialIndexSerde();
+//                serde.write(kryo, output, strTree);
                 output.close();
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
@@ -623,10 +628,14 @@ public class SpatialIndex {
 
                 String srsUri = input.readString();
                 boolean isBuilt = input.readBoolean();
-                SpatialIndexSerde serde = new SpatialIndexSerde();
-                STRtree strTree = (STRtree) serde.read(kryo, input, STRtree.class);
+//                SpatialIndexSerde serde = new SpatialIndexSerde();
+//                STRtree strTree = (STRtree) serde.read(kryo, input, STRtree.class);
+
+                STRtree defaultGraphTree = kryo.readObject(input, STRtree.class);
+                Map<String, STRtree> namedGraphTrees = (Map<String, STRtree>) kryo.readClassAndObject(input);
+
                 input.close();
-                return new SpatialIndex(strTree, isBuilt, srsUri);
+                return new SpatialIndex(defaultGraphTree, namedGraphTrees, isBuilt, srsUri);
             } catch (FileNotFoundException e) {
                 throw new RuntimeException(e);
             }

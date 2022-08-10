@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.kryo.serializers.MapSerializer;
 import org.apache.jena.geosparql.spatial.serde.GeometrySerde;
 import org.apache.jena.geosparql.spatial.serde.SpatialIndexSerde;
 import org.apache.jena.rdf.model.Resource;
@@ -14,6 +15,9 @@ import org.locationtech.jts.index.quadtree.Quadtree;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class JenaGeoSPARQLKryoRegistrator {
@@ -38,6 +42,12 @@ public class JenaGeoSPARQLKryoRegistrator {
         kryo.register(STRtree.class, indexSerializer);
         kryo.register(Resource.class, new ResourceSerializer());
         kryo.register(ResourceImpl.class, new ResourceSerializer());
+
+        SpatialIndexSerde serde = new SpatialIndexSerde();
+        kryo.register(STRtree.class, serde);
+        kryo.register(Quadtree.class, serde);
+        kryo.register(HashMap.class, new MapSerializer());
+        kryo.register(Map.class, new MapSerializer());
     }
 
     static class ResourceSerializer extends Serializer<Resource> {
