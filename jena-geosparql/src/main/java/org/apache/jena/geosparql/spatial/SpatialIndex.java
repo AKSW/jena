@@ -24,6 +24,9 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
 import org.apache.jena.atlas.logging.Log;
@@ -34,10 +37,12 @@ import org.apache.jena.geosparql.implementation.registry.SRSRegistry;
 import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
+import org.apache.jena.geosparql.spatial.serde.SpatialIndexSerde;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
@@ -134,6 +139,13 @@ public class SpatialIndex {
         this.strTree.build();
 
         this.isBuilt = true;
+        this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
+    }
+
+    public SpatialIndex(STRtree defaultGraphTree, Map<String, STRtree> namedGraphIndexTrees, boolean isBuilt, String srsURI) {
+        this.strTree = defaultGraphTree;
+        this.indexTrees = namedGraphIndexTrees;
+        this.isBuilt = isBuilt;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
 
@@ -308,13 +320,15 @@ public class SpatialIndex {
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, File spatialIndexFile) throws SpatialIndexException {
 
-        SpatialIndex spatialIndex = load(spatialIndexFile);
+        SpatialIndex spatialIndex = loadFromKryoSerialization(spatialIndexFile);//load(spatialIndexFile);
 
         if (spatialIndex.isEmpty()) {
             Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI);
-            save(spatialIndexFile, spatialIndexItems, srsURI);
+//            save(spatialIndexFile, spatialIndexItems, srsURI);
             spatialIndex = new SpatialIndex(spatialIndexItems, srsURI);
             spatialIndex.build();
+
+            spatialIndex.saveAsKryoSerialization(spatialIndexFile);
         }
 
         setSpatialIndex(dataset, spatialIndex);
@@ -581,6 +595,52 @@ public class SpatialIndex {
      */
     public static final void save(String spatialIndexFileURI, Collection<SpatialIndexItem> spatialIndexItems, String srsURI) throws SpatialIndexException {
         save(new File(spatialIndexFileURI), spatialIndexItems, srsURI);
+    }
+
+    public void saveAsKryoSerialization(File spatialIndexFile) {
+        if (spatialIndexFile != null) {
+            LOGGER.info("writing spatial index in Kryo format to " + spatialIndexFile.getPath());
+            try {
+                Kryo kryo = new Kryo();
+                new JenaGeoSPARQLKryoRegistrator().registerClasses(kryo);
+                Output output = new Output(new FileOutputStream(spatialIndexFile));
+                output.writeString(srsInfo.getSrsURI());
+                output.writeBoolean(isBuilt);
+
+                kryo.writeObject(output, strTree);
+                kryo.writeClassAndObject(output, indexTrees);
+//                SpatialIndexSerde serde = new SpatialIndexSerde();
+//                serde.write(kryo, output, strTree);
+                output.close();
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static SpatialIndex loadFromKryoSerialization(File spatialIndexFile) {
+        if (spatialIndexFile != null && spatialIndexFile.exists()) {
+            LOGGER.info("loading spatial index in Kryo format from " + spatialIndexFile.getPath());
+            try {
+                Kryo kryo = new Kryo();
+                new JenaGeoSPARQLKryoRegistrator().registerClasses(kryo);
+                Input input = new Input(new FileInputStream(spatialIndexFile));
+
+                String srsUri = input.readString();
+                boolean isBuilt = input.readBoolean();
+//                SpatialIndexSerde serde = new SpatialIndexSerde();
+//                STRtree strTree = (STRtree) serde.read(kryo, input, STRtree.class);
+
+                STRtree defaultGraphTree = kryo.readObject(input, STRtree.class);
+                Map<String, STRtree> namedGraphTrees = (Map<String, STRtree>) kryo.readClassAndObject(input);
+
+                input.close();
+                return new SpatialIndex(defaultGraphTree, namedGraphTrees, isBuilt, srsUri);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return new SpatialIndex();
     }
 
     /**
