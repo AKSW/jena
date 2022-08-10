@@ -283,7 +283,7 @@ public class GeoSPARQLConfig {
      * @throws SpatialIndexException
      */
     public static final void setupPrecomputedSpatialIndex(Dataset dataset, File spatialIndexFile) throws SpatialIndexException {
-        SpatialIndex si = SpatialIndex.load(spatialIndexFile);
+        SpatialIndex si = SpatialIndex.loadFromKryoSerialization(spatialIndexFile);
         SpatialIndex.setSpatialIndex(dataset, si);
     }
 
