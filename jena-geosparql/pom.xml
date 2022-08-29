@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>4.6.0-SNAPSHOT</version>
+    <version>4.7.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -49,7 +49,7 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-arq</artifactId>
-      <version>4.6.0-SNAPSHOT</version>
+      <version>4.7.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -163,6 +163,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
+          <!-- Must not be 11 : remove when base version is Java17 -->
+          <source>8</source>
           <version>true</version>
           <show>public</show>
           <quiet>true</quiet>
