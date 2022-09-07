@@ -119,7 +119,6 @@ package org.apache.jena.rdfxml.xmloutput.impl;
 import java.io.PrintWriter ;
 import java.util.* ;
 
-import org.apache.jena.ext.xerces.util.XMLChar;
 import org.apache.jena.iri.IRI ;
 import org.apache.jena.rdf.model.* ;
 import org.apache.jena.rdf.model.impl.PropertyImpl ;
@@ -127,6 +126,7 @@ import org.apache.jena.rdf.model.impl.Util ;
 import org.apache.jena.shared.BrokenException ;
 import org.apache.jena.shared.JenaException ;
 import org.apache.jena.shared.PropertyNotFoundException ;
+import org.apache.jena.util.XMLChar;
 import org.apache.jena.util.iterator.* ;
 import org.apache.jena.vocabulary.RDF ;
 import org.slf4j.Logger ;
@@ -158,7 +158,7 @@ class Unparser {
      * @param w
      *            The output.
      */
-    Unparser(Abbreviated parent, String localName, Model m, PrintWriter w) {
+    Unparser(RDFXML_Abbrev parent, String localName, Model m, PrintWriter w) {
         setLocalName(localName);
         prettyWriter = parent;
         out = w;
@@ -306,7 +306,7 @@ class Unparser {
 
     private Set<Resource> pleasingTypeSet = new HashSet<>();
 
-    final private Abbreviated prettyWriter;
+    final private RDFXML_Abbrev prettyWriter;
 
     private boolean avoidExplicitReification = true;
 

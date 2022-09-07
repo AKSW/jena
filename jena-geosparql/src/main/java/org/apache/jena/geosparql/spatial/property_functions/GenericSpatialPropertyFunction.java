@@ -99,7 +99,7 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         }
 
         if (subject.isVariable()) {
-            return checkUnbound(binding, execCxt, subject, limit);
+            return checkUnbound2(binding, execCxt, subject, limit);
         } else {
             //Subject is not a variable (and not a URI or Blank - tested earlier).
             throw new ExprEvalException("Not a URI, Blank or variable: " + FmtUtils.stringForNode(subject));

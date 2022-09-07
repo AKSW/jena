@@ -23,7 +23,7 @@
   <artifactId>jena</artifactId>
   <packaging>pom</packaging>
   <url>https://jena.apache.org/</url>
-  <version>4.6.0-SNAPSHOT</version>
+  <version>4.7.0-SNAPSHOT</version>
 
   <parent>
     <groupId>org.apache</groupId>
@@ -54,11 +54,11 @@
      <!-- Build -->
     <java.version>11</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2022-05-01T13:46:56Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2022-09-01T13:14:03Z</project.build.outputTimestamp>
 
     <!-- Testing -->
     <ver.junit>4.13.2</ver.junit>  
-    <ver.mockito>4.6.1</ver.mockito>
+    <ver.mockito>4.7.0</ver.mockito>
     <ver.awaitility>4.2.0</ver.awaitility>
     <ver.contract.tests>0.2.0</ver.contract.tests>
 
@@ -71,7 +71,7 @@
     <ver.jetty>10.0.11</ver.jetty>
     <ver.shiro>1.9.1</ver.shiro>
 
-    <ver.protobuf>3.21.4</ver.protobuf>
+    <ver.protobuf>3.21.5</ver.protobuf>
     <ver.libthrift>0.16.0</ver.libthrift>
 
     <!-- JSON-LD 1.1 -->
@@ -102,7 +102,7 @@
     <ver.commons-codec>1.15</ver.commons-codec>
     <ver.commons-compress>1.21</ver.commons-compress>
     <ver.dexxcollection>0.7</ver.dexxcollection>
-    <ver.micrometer>1.9.2</ver.micrometer>
+    <ver.micrometer>1.9.3</ver.micrometer>
 
     <!-- For testing, not shipped -->
     <ver.graalvm>22.2.0</ver.graalvm>
@@ -960,7 +960,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.4.0</version>
+          <version>3.4.1</version>
           <executions>
             <execution>
               <id>attach-javadocs</id>
@@ -970,52 +970,26 @@
             </execution>
           </executions>
           <configuration>
-            <!-- Java11:
-                 https://bugs.openjdk.java.net/browse/JDK-8212233
-                 JDK-8212233
-                 Fixed in 12.0.1, 11.0.3 (??)
-
-                 Explicitly define the source as Java8 when building
-                 with java8 source code for java8 output.
-                 Not good enough when compiling for Java11 output.
-
-                 https://issues.apache.org/jira/browse/MJAVADOC-555
-            -->
-
-            <!-- Fixes for Javadoc when building for Java11.
-                 (1) Fix for:
-                 Named / unnamed modules error/warning
-                 (2) Fix for:
-                 [ERROR] error: the unnamed module reads package PKG from both A and B
-
-                 Modules impacted:
-                   jena-geosparql
-                   jena-jdbc
-            -->
+            <!-- Fixes for Javadoc when building with Java11 -->
             <detectJavaApiLink>false</detectJavaApiLink>
-
-            <!-- 
-                 Some modules have source = ${java.version} where they use 
-                 Java 11 features but applying that here causes two kinds of problems.
-                 1/ apache-jena-libs:pom. This artifact as a dependency now causes
-                    an error attaching as a POM.
-                 2/ dependency errors on overlapping packages (which don't appear
-                    to overlap)
-                 3/ Mixed modules and non-module jars (may be the same as 2)
-            -->
-            <source>8</source>
-            <!-- End Java11 fixes (2021-01) -->
+            <source>${java.version}</source>
 
             <!-- To allow the build to keep going despite javadoc problems:
                  <failOnError>false</failOnError>
             -->
             <!-- For producible builds
                  https://maven.apache.org/guides/mini/guide-reproducible-builds.html
-                 See FAQ
             -->
             <notimestamp>true</notimestamp>
-            <quiet>true</quiet>
+
+            <!-- Java11 javadoc: "syntax,html" fails on things that aren't 
+                 wrong and applies unrequested checks such as group "missing".
+                 Java17 has fixed these and behaves as expected:
+                 <doclint>syntax,html,reference</doclint>
+            -->
             <doclint>none</doclint>
+
+            <quiet>true</quiet>
             <version>true</version>
             <show>public</show>
             <encoding>UTF-8</encoding>

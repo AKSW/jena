@@ -25,7 +25,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>4.6.0-SNAPSHOT</version>
+    <version>4.7.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -41,13 +41,13 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.6.0-SNAPSHOT</version>
+      <version>4.7.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.6.0-SNAPSHOT</version>
+      <version>4.7.0-SNAPSHOT</version>
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
@@ -55,7 +55,7 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-iri</artifactId>
-      <version>4.6.0-SNAPSHOT</version>
+      <version>4.7.0-SNAPSHOT</version>
     </dependency>
 
      <dependency>
@@ -180,6 +180,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
+          <!-- OK for Java17 (compiling to Java11); not OK for Java11
+               <doclint>syntax</doclint>
+          -->
+          <doclint>none</doclint>
           <author>true</author>
           <version>true</version>
           <show>public</show>
