@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.jena.dboe.index.test;
+package org.apache.jena.tdb.sys;
 
-import org.apache.jena.dboe.index.RangeIndex;
+import org.apache.jena.tdb.base.block.FileMode ;
 
-public interface RangeIndexMaker extends IndexMaker
-{
-    RangeIndex makeRangeIndex();
-    @Override
-    String getLabel();
+public class LibTestOps {
+
+    /** Expose package-scoped to other test packages */
+    public static void setFileMode(FileMode mode) {
+        SystemTDB.internalSetFileMode(mode);
+    }
 }

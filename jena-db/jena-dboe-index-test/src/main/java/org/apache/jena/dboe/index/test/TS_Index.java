@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.jena.tdb2.sys;
+package org.apache.jena.dboe.index.test;
 
-import org.apache.jena.dboe.base.block.FileMode;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class TestOps
-{
-    public static void setFileMode(FileMode mode)
-    {
-        SystemTDB.internalSetFileMode(mode);
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses( {
+    TestIndexMem.class
+} )
 
-}
-
+public class TS_Index
+{ }

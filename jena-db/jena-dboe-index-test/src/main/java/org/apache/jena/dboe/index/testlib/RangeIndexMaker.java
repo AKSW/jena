@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.jena.dboe.index.test;
+package org.apache.jena.dboe.index.testlib;
 
-import org.apache.jena.dboe.index.Index;
+import org.apache.jena.dboe.index.RangeIndex;
 
-public interface IndexMaker
+public interface RangeIndexMaker extends IndexMaker
 {
-    Index makeIndex();
+    RangeIndex makeRangeIndex();
+    @Override
     String getLabel();
 }

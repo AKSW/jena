@@ -16,17 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.jena.dboe.index;
+package org.apache.jena.dboe.index.testlib;
 
-import org.apache.jena.dboe.base.record.RecordFactory;
-import org.apache.jena.dboe.index.test.AbstractTestIndex;
+import org.apache.jena.dboe.index.Index;
 
-public class TestIndexMem extends AbstractTestIndex
+public interface IndexMaker
 {
-    @Override
-    protected Index makeIndex(int kLen, int vLen) {
-        RecordFactory rf = new RecordFactory(kLen, vLen);
-        return new IndexMap(rf);
-    }
-
+    Index makeIndex();
+    String getLabel();
 }

@@ -54,11 +54,11 @@
      <!-- Build -->
     <java.version>11</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.build.outputTimestamp>2022-08-20T08:12:49Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2022-09-01T13:14:03Z</project.build.outputTimestamp>
 
     <!-- Testing -->
     <ver.junit>4.13.2</ver.junit>  
-    <ver.mockito>4.6.1</ver.mockito>
+    <ver.mockito>4.7.0</ver.mockito>
     <ver.awaitility>4.2.0</ver.awaitility>
     <ver.contract.tests>0.2.0</ver.contract.tests>
 
@@ -71,7 +71,7 @@
     <ver.jetty>10.0.11</ver.jetty>
     <ver.shiro>1.9.1</ver.shiro>
 
-    <ver.protobuf>3.21.4</ver.protobuf>
+    <ver.protobuf>3.21.5</ver.protobuf>
     <ver.libthrift>0.16.0</ver.libthrift>
 
     <!-- JSON-LD 1.1 -->
@@ -102,7 +102,7 @@
     <ver.commons-codec>1.15</ver.commons-codec>
     <ver.commons-compress>1.21</ver.commons-compress>
     <ver.dexxcollection>0.7</ver.dexxcollection>
-    <ver.micrometer>1.9.2</ver.micrometer>
+    <ver.micrometer>1.9.3</ver.micrometer>
 
     <!-- For testing, not shipped -->
     <ver.graalvm>22.2.0</ver.graalvm>
@@ -960,7 +960,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.4.0</version>
+          <version>3.4.1</version>
           <executions>
             <execution>
               <id>attach-javadocs</id>

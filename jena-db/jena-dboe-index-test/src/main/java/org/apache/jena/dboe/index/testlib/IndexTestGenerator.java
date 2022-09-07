@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.jena.dboe.index.test;
+package org.apache.jena.dboe.index.testlib;
 
 import org.apache.jena.atlas.lib.RandomLib;
 import org.apache.jena.atlas.test.ExecGenerator;
