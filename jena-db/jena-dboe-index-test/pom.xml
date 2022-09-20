@@ -28,6 +28,7 @@
     <groupId>org.apache.jena</groupId>
     <artifactId>jena-db</artifactId>
     <version>4.7.0-SNAPSHOT</version>
+    <relativePath>..</relativePath>
   </parent> 
 
   <properties>
@@ -49,5 +50,63 @@
       <scope>compile</scope>
     </dependency>
 
+    <!--
+        Fix necessary for java11 (not java17)
+        when building javadoc.
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <version>[2.1,)</version>
+      <scope>compile</scope>
+    </dependency>
+    -->
+
   </dependencies>
+
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions> 
+          <execution>
+            <id>attach-sources-test</id> 
+            <goals>
+              <goal>test-jar-no-fork</goal> 
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <!--
+              java11 issue - 
+              For generating javadoc, the javadoc tool needs org.hamcrest:hamcrest
+              in scope compile in this module.
+              Either skip javadoc or (despite junit using hamcrest-core)
+              use the dependency commented out up-file.
+          -->
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
 </project>
