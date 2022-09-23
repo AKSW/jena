@@ -316,16 +316,14 @@ public abstract class GraphBase implements GraphWithPerform
         }
 
     /**
-     	Answer true iff this graph contains no triples (hidden reification quads do
-        not count). The default implementation tests whether {@link #contains(Node, Node, Node)}
-        with only {@link Node#ANY} arguments returns false.
-        Subclasses may override if necessary. This method may become final and defined in terms of other
-        methods.
+        Answer true iff this graph contains no triples.
+        @implNote The default implementation relies on {@link #contains(Triple)}
+         with {@link Triple#ANY} as the argument. Subclasses may override if necessary.
     */
     @Override
     public boolean isEmpty()
         {
-            return !contains( Node.ANY, Node.ANY, Node.ANY );
+            return !contains( Triple.ANY );
         }
 
     /**
