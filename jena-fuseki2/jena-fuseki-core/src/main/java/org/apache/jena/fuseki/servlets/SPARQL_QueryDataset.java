@@ -52,11 +52,11 @@ public class SPARQL_QueryDataset extends SPARQLQueryProcessor {
         DatasetGraph dsg = getDataset(action);
         DatasetDescription dsDesc = SPARQLProtocol.getDatasetDescription(action, query);
         if ( dsDesc != null ) {
-            query.getGraphURIs().clear();
-            query.getNamedGraphURIs().clear();
-
-            query.getGraphURIs().addAll(dsDesc.getDefaultGraphURIs());
-            query.getNamedGraphURIs().addAll(dsDesc.getNamedGraphURIs());
+            dsg = DynamicDatasets.dynamicDataset(dsDesc, dsg, false);
+            if ( query.hasDatasetDescription() ) {
+                query.getGraphURIs().clear();
+                query.getNamedGraphURIs().clear();
+            }
         }
         return Pair.create(dsg, query);
     }
