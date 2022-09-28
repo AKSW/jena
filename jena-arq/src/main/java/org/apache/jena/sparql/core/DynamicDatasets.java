@@ -21,6 +21,7 @@ package org.apache.jena.sparql.core;
 import static org.apache.jena.sparql.util.NodeUtils.convertToSetNodes;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 
 import org.apache.jena.graph.Graph ;
@@ -57,9 +58,9 @@ public class DynamicDatasets
     {
         if ( description == null )
             return dsg ;
-    	//An empty description means leave the dataset as-is
-    	if (description.isEmpty() )
-    		return dsg;
+        //An empty description means leave the dataset as-is
+        if (description.isEmpty() )
+            return dsg;
 
         Set<Node> defaultGraphs = convertToSetNodes(description.getDefaultGraphURIs()) ;
         Set<Node> namedGraphs = convertToSetNodes(description.getNamedGraphURIs()) ;
@@ -112,11 +113,24 @@ public class DynamicDatasets
     }
 
     public static class DynamicDatasetGraph extends DatasetGraphReadOnly implements DatasetGraphWrapperView {
-        private final DatasetGraph projected;
+        private final DatasetGraph projected ;
 
         public DynamicDatasetGraph(DatasetGraph viewDSG, DatasetGraph baseDSG) {
-            super(viewDSG, baseDSG.getContext().copy());
-            this.projected = baseDSG;
+            super(viewDSG, baseDSG.getContext().copy()) ;
+            this.projected = baseDSG ;
+        }
+
+        /** Returns the original dataset this DynamicDatasetGraph is based on */
+        public DatasetGraph getProjectedDataset() {
+            return projected ;
+        }
+
+        public Set<Node> getDefaultGraphs() {
+            return getContext().get(ARQConstants.symDatasetDefaultGraphs, Collections.emptySet()) ;
+        }
+
+        public Set<Node> getNamedGraphs() {
+            return getContext().get(ARQConstants.symDatasetNamedGraphs, Collections.emptySet()) ;
         }
     }
 }
