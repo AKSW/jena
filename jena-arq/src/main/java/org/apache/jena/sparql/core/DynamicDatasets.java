@@ -114,7 +114,7 @@ public class DynamicDatasets
     }
 
     public static class DynamicDatasetGraph extends DatasetGraphReadOnly implements DatasetGraphWrapperView {
-        private final DatasetGraph projected;
+        private final DatasetGraph projected ;
 
         public DynamicDatasetGraph(DatasetGraph viewDSG, DatasetGraph baseDSG) {
             super(viewDSG, baseDSG.getContext().copy());

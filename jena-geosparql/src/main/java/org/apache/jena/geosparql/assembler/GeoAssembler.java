@@ -33,6 +33,7 @@ import org.apache.jena.atlas.io.IO;
 import org.apache.jena.geosparql.configuration.GeoSPARQLConfig;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.configuration.SrsException;
+import org.apache.jena.geosparql.spatial.SpatialIndex;
 import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
@@ -116,6 +117,12 @@ public class GeoAssembler extends DatasetAssembler {
         // "File to load or store the spatial index. Default to " + SPATIAL_INDEX_FILE + " in TDB folder if using TDB and not set. Otherwise spatial index is not stored.
         if (root.hasProperty(pSpatialIndexFile) )
             spatialIndexFilename = GraphUtils.getStringValue(root, pSpatialIndexFile);
+
+        // Spatial Index file. CLI: names = {"--spatial_index", "-si"}
+        boolean spatialIndexPerGraph = false;
+        // "File to load or store the spatial index. Default to " + SPATIAL_INDEX_FILE + " in TDB folder if using TDB and not set. Otherwise spatial index is not stored.
+        if (root.hasProperty(pSeparateIndexPerGraph) )
+            spatialIndexPerGraph = getBooleanValue(root, pSeparateIndexPerGraph);
 
         // ---- Build
 
