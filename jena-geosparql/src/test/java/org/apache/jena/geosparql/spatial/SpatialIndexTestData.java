@@ -63,6 +63,7 @@ public class SpatialIndexTestData {
     public static final SRSInfo OSGB_SRS_INFO = new SRSInfo(SRS_URI.OSGB36_CRS);
 
     private static SpatialIndex TEST_SPATIAL_INDEX = null;
+    private static SpatialIndex TEST_SPATIAL_INDEX_QUADS = null;
     private static Dataset TEST_DATASET = null;
 
     public static final SpatialIndex createTestIndex() {
@@ -88,7 +89,7 @@ public class SpatialIndexTestData {
 
     public static final SpatialIndex createTestIndexWithGraphs() {
 
-        if (TEST_SPATIAL_INDEX == null) {
+        if (TEST_SPATIAL_INDEX_QUADS == null) {
             try {
                 List<SpatialIndexItem> items = List.of(
                         new SpatialIndexItemGraph(LONDON_GEOMETRY_WRAPPER.getEnvelope(), LONDON_FEATURE, "urn:g1"),
@@ -101,13 +102,13 @@ public class SpatialIndexTestData {
                 SpatialIndex spatialIndex = new SpatialIndex(items, SRS_URI.WGS84_CRS);
 
                 spatialIndex.build();
-                TEST_SPATIAL_INDEX = spatialIndex;
+                TEST_SPATIAL_INDEX_QUADS = spatialIndex;
             } catch (SpatialIndexException ex) {
 
             }
         }
 
-        return TEST_SPATIAL_INDEX;
+        return TEST_SPATIAL_INDEX_QUADS;
     }
 
     public static final Dataset createTestDataset() {
