@@ -240,6 +240,32 @@ public class PathLib
                     }
                 }
             }
+        } else if (path instanceof P_Alt) {
+            Path left = ((P_Alt) path).getLeft();
+            Iter<Node> iter = Iter.empty();
+
+            if (left instanceof P_Link) {
+                P_Link link = (P_Link) left;
+                if ( ! isPropertyFunction(link.getNode(), execCxt.getContext()) ) {
+                    Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
+                    iter = Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getSubject).distinct());
+                }
+            } else {
+                iter = Iter.concat(iter, determineUngroundedStartingSet(graph, left, execCxt));
+            }
+
+            Path right = ((P_Alt) path).getRight();
+            if (right instanceof P_Link) {
+                P_Link link = (P_Link) right;
+                if ( ! isPropertyFunction(link.getNode(), execCxt.getContext()) ) {
+                    Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
+                    iter = Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getSubject).distinct());
+                }
+            } else {
+                iter = Iter.concat(iter, determineUngroundedStartingSet(graph, right, execCxt));
+            }
+
+            return iter;
         }
         // No idea - everything.
         return GraphUtils.allNodes(graph) ;
