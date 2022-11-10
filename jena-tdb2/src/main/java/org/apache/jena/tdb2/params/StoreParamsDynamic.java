@@ -27,18 +27,22 @@ import org.apache.jena.dboe.base.block.FileMode;
 
 public interface StoreParamsDynamic {
 
+    /** Convenience label - no effect except as a descriptive label */
+    public String getLabel();
+
     /** Store-wide file access mode */
     public FileMode getFileMode();
     public boolean isSetFileMode();
 
-    /** Block read cache (note: mapped files do not have a block cache) */
+    /** Block read cache (note: direct mode only - mapped files do not have a block cache) */
     public Integer getBlockReadCacheSize();
     public boolean isSetBlockReadCacheSize();
 
-    /** Block write cache (note: mapped files do not have a block cache) */
+    /** Block write cache (note: direct mode only - mapped files do not have a block cache) */
     public Integer getBlockWriteCacheSize();
     public boolean isSetBlockWriteCacheSize();
 
+    // == NodeTable - Triples and Quads
     /** Node cache for Node{@literal ->}NodeId. */
     public Integer getNode2NodeIdCacheSize();
     public boolean isSetNode2NodeIdCacheSize();
@@ -51,12 +55,12 @@ public interface StoreParamsDynamic {
     public Integer getNodeMissCacheSize();
     public boolean isSetNodeMissCacheSize();
 
-    // Same for prefix table.
+    // == NodeTable - Prefix table.
     /** Node cache for Node{@literal ->}NodeId. */
     public Integer getPrefixNode2NodeIdCacheSize();
     public boolean isSetPrefixNode2NodeIdCacheSize();
 
-    /** Node cache for NodeId{@literal ->}Node. Important for SPARQL results. */
+    /** Node cache for NodeId{@literal ->}Node. */
     public Integer getPrefixNodeId2NodeCacheSize();
     public boolean isSetPrefixNodeId2NodeCacheSize();
 
