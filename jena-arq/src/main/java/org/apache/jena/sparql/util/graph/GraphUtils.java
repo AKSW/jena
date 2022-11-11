@@ -28,6 +28,7 @@ import org.apache.jena.graph.Triple ;
 import org.apache.jena.query.* ;
 import org.apache.jena.rdf.model.* ;
 import org.apache.jena.shared.PropertyNotFoundException;
+import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.NotUniqueException ;
 import org.apache.jena.sparql.util.PropertyRequiredException ;
 import org.apache.jena.sparql.util.QueryExecUtils;
@@ -233,15 +234,38 @@ public class GraphUtils {
     }
 
     /** All subjects and objects, no duplicates. */
-    public static Iterator<Node> allNodes(Graph graph) {
-        Set<Node> x = new HashSet<>(1000) ;
+    public static Iterator<Node> allNodes(Graph graph, ExecutionContext execCxt) {
         ExtendedIterator<Triple> iter = graph.find(Node.ANY, Node.ANY, Node.ANY) ;
-        for ( ; iter.hasNext() ; ) {
-            Triple t = iter.next() ;
-            x.add(t.getSubject()) ;
-            x.add(t.getObject()) ;
+        IterSO iterSO = new IterSO(iter);
+        Iterator<Node> distinctIterator = Iter.distinct(iterSO);
+        return distinctIterator;
+    }
+
+    static class IterSO implements Iterator<Node> {
+        private final Iterator<Triple> it;
+        private boolean tripleConsumed;
+        private Triple t;
+
+        IterSO(Iterator<Triple> it) {
+            this.it = it;
+            this.tripleConsumed = true;
         }
-        iter.close() ;
-        return x.iterator() ;
+
+        @Override
+        public boolean hasNext() {
+            return !this.tripleConsumed || it.hasNext();
+        }
+
+        @Override
+        public Node next() {
+            if (this.tripleConsumed) {
+                t = it.next();
+                tripleConsumed = false;
+                return t.getSubject();
+            } else {
+                tripleConsumed = true;
+                return t.getObject();
+            }
+        }
     }
 }

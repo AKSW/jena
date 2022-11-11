@@ -268,7 +268,7 @@ public class PathLib
             return iter;
         }
         // No idea - everything.
-        return GraphUtils.allNodes(graph) ;
+        return GraphUtils.allNodes(graph, execCxt) ;
     }
     
     private static boolean isPropertyFunction(Node node, Context context) {
