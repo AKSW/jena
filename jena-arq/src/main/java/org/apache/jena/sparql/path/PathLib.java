@@ -41,9 +41,7 @@ import org.apache.jena.sparql.engine.ExecutionContext ;
 import org.apache.jena.sparql.engine.QueryIterator ;
 import org.apache.jena.sparql.engine.binding.Binding ;
 import org.apache.jena.sparql.engine.binding.BindingFactory ;
-import org.apache.jena.sparql.engine.iterator.QueryIterConcat ;
-import org.apache.jena.sparql.engine.iterator.QueryIterPlainWrapper ;
-import org.apache.jena.sparql.engine.iterator.QueryIterYieldN ;
+import org.apache.jena.sparql.engine.iterator.*;
 import org.apache.jena.sparql.mgt.Explain ;
 import org.apache.jena.sparql.path.eval.PathEval ;
 import org.apache.jena.sparql.pfunction.PropertyFunctionFactory ;
@@ -180,37 +178,29 @@ public class PathLib
     private static QueryIterator execUngroundedPath(Binding binding, Graph graph, Var sVar, Path path, Var oVar, ExecutionContext execCxt) {
         // Starting points.
         Iterator<Node> iter = determineUngroundedStartingSet(graph, path, execCxt) ;
-        QueryIterConcat qIterCat = new QueryIterConcat(execCxt) ;
-        
-        for ( ; iter.hasNext() ; )
-        {
-            Node n = iter.next() ;
-            Binding b2 = BindingFactory.binding(binding, sVar, n) ;
-            Iterator<Node> pathIter = PathEval.eval(graph, n, path, execCxt.getContext()) ;
-            QueryIterator qIter = evalGroundedOneEnd(b2, pathIter, oVar, execCxt) ;
-            qIterCat.add(qIter) ;
-        }
-        return qIterCat ;
+        Iter<QueryIterator> map = Iter.iter(iter).map(n -> {
+            Binding b2 = BindingFactory.binding(binding, sVar, n);
+            Iterator<Node> pathIter = PathEval.eval(graph, b2.get(sVar), path, execCxt.getContext());
+            QueryIterator qIter = evalGroundedOneEnd(b2, pathIter, oVar, execCxt);
+            return qIter;
+        });
+        return new QueryIterConcatIterator(map, execCxt);
     }
     
     private static QueryIterator execUngroundedPathSameVar(Binding binding, Graph graph, Var var, Path path, ExecutionContext execCxt) {
         // Try each end, ungrounded.
         // Slightly more efficient would be to add a per-engine to do this.
         Iterator<Node> iter = determineUngroundedStartingSet(graph, path, execCxt) ;
-        QueryIterConcat qIterCat = new QueryIterConcat(execCxt) ;
-        
-        for ( ; iter.hasNext() ; )
-        {
-            Node n = iter.next() ;
-            Binding b2 = BindingFactory.binding(binding, var, n) ;
-            int x = existsPath(graph, n, path, n, execCxt) ;
-            if ( x > 0 )
-            {
-                QueryIterator qIter = new QueryIterYieldN(x, b2, execCxt) ;
-                qIterCat.add(qIter) ;
+        Iter<QueryIterator> map = Iter.iter(iter).map(n -> {
+            Binding b2 = BindingFactory.binding(binding, var, n);
+            int x = existsPath(graph, n, path, n, execCxt);
+            if (x > 0) {
+                return new QueryIterYieldN(x, b2, execCxt);
+            } else {
+                return new QueryIterNullIterator(execCxt);
             }
-        }
-        return qIterCat ; 
+        });
+        return new QueryIterConcatIterator(map, execCxt);
     }
     
     private static Iterator<Node> determineUngroundedStartingSet(Graph graph, Path path, ExecutionContext execCxt) {
@@ -295,7 +285,7 @@ public class PathLib
             }
         }
         // No idea - everything.
-        return GraphUtils.allNodes(graph) ;
+        return GraphUtils.allNodes(graph, execCxt) ;
     }
 
     private static List<Path> getAlternatives(Path path) {
