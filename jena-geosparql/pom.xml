@@ -92,7 +92,6 @@
       <groupId>org.apache.sis.non-free</groupId>
       <artifactId>sis-embedded-data</artifactId>
       <version>${ver.sis}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
