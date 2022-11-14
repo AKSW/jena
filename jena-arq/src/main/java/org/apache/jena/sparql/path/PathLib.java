@@ -180,13 +180,14 @@ public class PathLib
     private static QueryIterator execUngroundedPath(Binding binding, Graph graph, Var sVar, Path path, Var oVar, ExecutionContext execCxt) {
         // Starting points.
         Iterator<Node> iter = determineUngroundedStartingSet(graph, path, execCxt) ;
+        QueryIterator qIterPlain = QueryIterPlainWrapper.create(Iter
+                .iter(iter).map(n -> BindingFactory.binding(binding, sVar, n)), execCxt);
         QueryIterConcat qIterCat = new QueryIterConcat(execCxt) ;
-        
-        for ( ; iter.hasNext() ; )
+
+        for ( ; qIterPlain.hasNext() ; )
         {
-            Node n = iter.next() ;
-            Binding b2 = BindingFactory.binding(binding, sVar, n) ;
-            Iterator<Node> pathIter = PathEval.eval(graph, n, path, execCxt.getContext()) ;
+            Binding b2 = qIterPlain.next() ;
+            Iterator<Node> pathIter = PathEval.eval(graph, b2.get(sVar), path, execCxt.getContext()) ;
             QueryIterator qIter = evalGroundedOneEnd(b2, pathIter, oVar, execCxt) ;
             qIterCat.add(qIter) ;
         }

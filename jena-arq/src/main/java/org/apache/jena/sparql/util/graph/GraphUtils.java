@@ -34,6 +34,7 @@ import org.apache.jena.sparql.util.PropertyRequiredException ;
 import org.apache.jena.sparql.util.QueryExecUtils;
 import org.apache.jena.sparql.util.TypeNotUniqueException ;
 import org.apache.jena.util.iterator.ExtendedIterator ;
+import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.vocabulary.RDF ;
 
 /** Graph utilities. See also GraphFactory. */
@@ -241,14 +242,19 @@ public class GraphUtils {
         return distinctIterator;
     }
 
-    static class IterSO implements Iterator<Node> {
-        private final Iterator<Triple> it;
+    static class IterSO extends NiceIterator<Node> {
+        private final ExtendedIterator<Triple> it;
         private boolean tripleConsumed;
-        private Triple t;
+        private Triple triple;
 
-        IterSO(Iterator<Triple> it) {
+        IterSO(ExtendedIterator<Triple> it) {
             this.it = it;
             this.tripleConsumed = true;
+        }
+
+        @Override
+        public void close() {
+            this.it.close();
         }
 
         @Override
@@ -259,12 +265,12 @@ public class GraphUtils {
         @Override
         public Node next() {
             if (this.tripleConsumed) {
-                t = it.next();
+                triple = it.next();
                 tripleConsumed = false;
-                return t.getSubject();
+                return triple.getSubject();
             } else {
                 tripleConsumed = true;
-                return t.getObject();
+                return triple.getObject();
             }
         }
     }
