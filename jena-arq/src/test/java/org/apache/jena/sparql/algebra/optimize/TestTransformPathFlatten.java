@@ -98,7 +98,27 @@ public class TestTransformPathFlatten {
             ,"   ))");
         test(op1, op2);
     }
-    
+
+    // JENA-1300 : expand P_Alt to OpUnion
+    @Test public void pathFlatten_20() {
+        Op op1 = path("?x", ":p1|:p2", "?y");
+        Op op2 = op("(union"
+                ,"  (bgp (triple ?x :p1 ?y))"
+                ,"  (bgp (triple ?x :p2 ?y)))");
+        test(op1, op2);
+    }
+
+    // GH-1616 : expand P_Alt to OpUnion, then P_ReverseLink to OpBGP
+    @Test public void pathFlatten_21() {
+        Op op1 = path("?x", ":p0*/(:p1|^:p2)", "?y");
+        Op op2 = op("(sequence"
+                ,"  (path ?x (path* :p0) ??P0)"
+                ,"  (union"
+                ,"    (bgp (triple ??P0 :p1 ?y))"
+                ,"    (bgp (triple ?y :p2 ??P0))))");
+        test(op1, op2);
+    }
+
     private static Op path(String s, String pathStr, String o) {
         Path path = PathParser.parse(pathStr, prologue);
         TriplePath tp = new TriplePath(SSE.parseNode(s), path, SSE.parseNode(o));
