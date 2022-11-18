@@ -29,7 +29,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
-import org.apache.jena.atlas.logging.Log;
+import org.apache.jena.atlas.iterator.Iter;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.implementation.GeometryWrapper;
 import org.apache.jena.geosparql.implementation.SRSInfo;
@@ -37,14 +37,13 @@ import org.apache.jena.geosparql.implementation.registry.SRSRegistry;
 import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
-import org.apache.jena.geosparql.spatial.serde.SpatialIndexSerde;
-import org.apache.jena.query.Dataset;
-import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.ReadWrite;
+import org.apache.jena.graph.Node;
+import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
+import org.apache.jena.sparql.util.ResultSetUtils;
 import org.apache.jena.sparql.util.Symbol;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.locationtech.jts.geom.Envelope;
@@ -387,18 +386,46 @@ public class SpatialIndex {
         Collection<SpatialIndexItem> items = getSpatialIndexItems(defaultModel, srsURI);
 
         //Named Models
-        Iterator<String> graphNames = dataset.listNames();
-        while (graphNames.hasNext()) {
-            String graphName = graphNames.next();
+        long s = System.currentTimeMillis();
+        List<RDFNode> graphs = findSpatialGraphs(dataset);
+        System.out.println(System.currentTimeMillis() - s);
+
+        graphs.forEach(g -> {
+            String graphName = g.asResource().getURI();
             Model namedModel = dataset.getNamedModel(graphName);
-            Collection<SpatialIndexItem> graphItems = getSpatialIndexItems(namedModel, srsURI);
-            graphItems = graphItems.stream().map(item -> new SpatialIndexItemGraph(item, graphName)).collect(Collectors.toList());
-            items.addAll(graphItems);
-        }
+            try {
+                Collection<SpatialIndexItem> graphItems = getSpatialIndexItems(namedModel, srsURI);
+                graphItems = graphItems.stream().map(item -> new SpatialIndexItemGraph(item, graphName)).collect(Collectors.toList());
+                items.addAll(graphItems);
+            } catch (SpatialIndexException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         dataset.end();
 
         return items;
+    }
+
+    public static List<RDFNode> findSpatialGraphs(Dataset ds) {
+        Query query = QueryFactory.create("PREFIX geo: <http://www.opengis.net/ont/geosparql#> SELECT DISTINCT ?g { GRAPH ?g {?s geo:hasGeometry ?o} }");
+        ResultSet rs = ds.calculateRead(() -> {
+            try (QueryExecution qe = QueryExecutionFactory.create(query, ds)) {
+                return ResultSetFactory.copyResults(qe.execSelect());
+            }
+        });
+        List<RDFNode> graphs = ResultSetUtils.resultSetToList(rs, "g");
+        return graphs;
+//        Iterator<Quad> quadIterator = ds.asDatasetGraph().find(null, null, Geo.HAS_GEOMETRY_NODE, null);
+//        Iter<Node> graphs = Iter.iter(quadIterator).map(Quad::getGraph).distinct();
+//        ds.begin(ReadWrite.READ);
+//        return graphs;
+    }
+
+    public static Iter<Node> findSpatialGraphsFind(Dataset ds) {
+        Iterator<Quad> quadIterator = ds.asDatasetGraph().find(null, null, Geo.HAS_GEOMETRY_NODE, null);
+        Iter<Node> graphs = Iter.iter(quadIterator).map(Quad::getGraph).distinct();
+        return graphs;
     }
 
     /**
@@ -676,6 +703,25 @@ public class SpatialIndex {
             } finally {
                 LOGGER.info("Saving Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
             }
+        }
+    }
+
+    public static final void reindexGraph(Dataset dataset, SpatialIndex index, String graphURI, String srsURI) throws SpatialIndexException {
+        Model model = dataset.getNamedModel(graphURI);
+        if (model != null) {
+            long startTime = System.currentTimeMillis();
+            LOGGER.info("reindexing graph {} ...", graphURI);
+            Collection<SpatialIndexItem> items = getSpatialIndexItems(model, srsURI);
+            items = items.stream()
+                    .map(item -> new SpatialIndexItemGraph(item, graphURI))
+                    .collect(Collectors.toList());
+
+            STRtree tree = new STRtree(items.size());
+            index.insertItems(tree, items);
+            tree.build();
+            index.indexTrees.put(graphURI, tree);
+            long endTime = System.currentTimeMillis();
+            LOGGER.info("reindexed graph {} in {} ms", graphURI, (endTime - startTime));
         }
     }
 }
