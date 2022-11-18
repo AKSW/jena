@@ -243,7 +243,7 @@ public class GraphUtils {
     }
 
     static class IterSO extends NiceIterator<Node> {
-        private final ExtendedIterator<Triple> it;
+        private ExtendedIterator<Triple> it;
         private boolean tripleConsumed;
         private Triple triple;
 
@@ -254,7 +254,7 @@ public class GraphUtils {
 
         @Override
         public void close() {
-            this.it.close();
+            it.close();
         }
 
         @Override
