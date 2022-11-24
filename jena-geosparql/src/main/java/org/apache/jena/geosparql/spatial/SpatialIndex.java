@@ -258,7 +258,6 @@ public class SpatialIndex {
         // handle union graph
         if (graph.equals(Quad.unionGraph.getURI())) {
             LOGGER.warn("spatial index lookup on union graph");
-            searchEnvelope.
             HashSet<Resource> items = indexTrees.values().stream()
                     .map(tree -> tree.query(searchEnvelope))
                     .collect(HashSet::new,
