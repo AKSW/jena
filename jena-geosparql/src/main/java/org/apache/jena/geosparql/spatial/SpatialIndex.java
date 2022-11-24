@@ -254,14 +254,27 @@ public class SpatialIndex {
 
     public HashSet<Resource> query(Envelope searchEnvelope, String graph) {
         LOGGER.debug("spatial index lookup on graph: " + graph);
-        if (!indexTrees.containsKey(graph)) {
-            LOGGER.warn("graph not indexed: " + graph);
-        }
-        STRtree tree = indexTrees.get(graph);
-        if (tree != null && !tree.isEmpty()) {
-            return new HashSet<>(tree.query(searchEnvelope));
+
+        // handle union graph
+        if (graph.equals(Quad.unionGraph.getURI())) {
+            LOGGER.warn("spatial index lookup on union graph");
+            searchEnvelope.
+            HashSet<Resource> items = indexTrees.values().stream()
+                    .map(tree -> tree.query(searchEnvelope))
+                    .collect(HashSet::new,
+                            Set::addAll,
+                            Set::addAll);
+            return items;
         } else {
-            return new HashSet<>();
+            if (!indexTrees.containsKey(graph)) {
+                LOGGER.warn("graph not indexed: " + graph);
+            }
+            STRtree tree = indexTrees.get(graph);
+            if (tree != null && !tree.isEmpty()) {
+                return new HashSet<>(tree.query(searchEnvelope));
+            } else {
+                return new HashSet<>();
+            }
         }
     }
 
