@@ -235,7 +235,7 @@ public class GraphUtils {
     }
 
     /** All subjects and objects, no duplicates. */
-    public static Iterator<Node> allNodes(Graph graph, ExecutionContext execCxt) {
+    public static Iterator<Node> allNodes(Graph graph) {
         ExtendedIterator<Triple> iter = graph.find(Node.ANY, Node.ANY, Node.ANY) ;
         IterSO iterSO = new IterSO(iter);
         Iterator<Node> distinctIterator = Iter.distinct(iterSO);

@@ -285,7 +285,7 @@ public class PathLib
             }
         }
         // No idea - everything.
-        return GraphUtils.allNodes(graph, execCxt) ;
+        return GraphUtils.allNodes(graph) ;
     }
 
     private static List<Path> getAlternatives(Path path) {
