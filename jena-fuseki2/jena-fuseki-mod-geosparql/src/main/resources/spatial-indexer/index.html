@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Index Controls</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rebuild Spatial Index for Selected Graphs</h1>
+
+    <div id="controls">
+        <input type="text" id="filter" placeholder="Type to filter...">
+        <button id="deselect-all">Deselect All</button>
+        <button id="apply-action">Apply to all graphs</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Select</th>
+                <th>Graph Name</th>
+            </tr>
+        </thead>
+        <tbody id="graph-list">
+            <!-- Graph checkboxes will be populated here -->
+        </tbody>
+    </table>
+
+    <script>
+        const sparqlEndpoint = document.location.href + '/../';
+        const apiEndpoint = document.location.href;
+
+        async function fetchGraphs() {
+            const query = `SELECT ?g { { BIND(<urn:x-arq:DefaultGraph> AS ?g) } UNION { GRAPH ?g { } } }`;
+            const url = `${sparqlEndpoint}?query=${encodeURIComponent(query)}&format=application/json`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.results.bindings.map(binding => binding.g.value);
+            } catch (error) {
+                console.error('Error fetching graphs:', error);
+                return [];
+            }
+        }
+
+        function renderGraphs(graphs) {
+            const graphList = document.getElementById('graph-list');
+            graphList.innerHTML = '';
+
+            graphs.forEach(graph => {
+                const row = document.createElement('tr');
+
+                const checkboxCell = document.createElement('td');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = graph;
+                checkbox.addEventListener('change', updateApplyButtonLabel);
+                checkboxCell.appendChild(checkbox);
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = graph;
+
+                row.appendChild(checkboxCell);
+                row.appendChild(nameCell);
+                graphList.appendChild(row);
+            });
+        }
+
+        function updateApplyButtonLabel() {
+            const selectedGraphs = document.querySelectorAll('#graph-list input:checked');
+            const applyButton = document.getElementById('apply-action');
+            applyButton.textContent = selectedGraphs.length === 0 ? 'Apply to all graphs' : `Apply to ${selectedGraphs.length} graphs`;
+        }
+
+        document.getElementById('filter').addEventListener('input', function () {
+            const filterText = this.value.toLowerCase();
+            document.querySelectorAll('#graph-list tr').forEach(row => {
+                const label = row.children[1].textContent.toLowerCase();
+                row.style.display = label.includes(filterText) ? '' : 'none';
+            });
+        });
+
+        const abortController = new AbortController();
+        const signal = abortController.signal;
+
+        const applyBtn = document.getElementById('apply-action');
+
+        async function reIndexGraphs(graphs) {
+            applyBtn.disabled = true;
+            const params = new URLSearchParams({ "graph": graphs, "commit": null });
+            try {
+              const response = await fetch(apiEndpoint, { "method": "POST", "body": params, signal })
+
+              if (response.status != 200) {
+                const text = await response.text();
+                throw new Error("HTTP Error: " + text);
+              }
+
+              alert("Reindex complete");
+            } catch (error) {
+              alert(`Error: ${error.message}`);
+            }
+            applyBtn.disabled = false;
+        }
+
+        applyBtn.addEventListener('click', function () {
+            const selectedGraphs = Array.from(document.querySelectorAll('#graph-list input:checked'))
+                .map(checkbox => checkbox.value);
+
+            reIndexGraphs(selectedGraphs);
+            // alert(selectedGraphs.length === 0 ? 'Applying action to all graphs' : `Applying action to: \n${selectedGraphs.join('\n')}`);
+        });
+
+        document.getElementById('deselect-all').addEventListener('click', function () {
+            document.querySelectorAll('#graph-list input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
+            updateApplyButtonLabel();
+        });
+
+        async function initialize() {
+            const graphs = await fetchGraphs();
+            renderGraphs(graphs);
+            updateApplyButtonLabel();
+        }
+
+        initialize();
+    </script>
+</body>
+</html>
+
