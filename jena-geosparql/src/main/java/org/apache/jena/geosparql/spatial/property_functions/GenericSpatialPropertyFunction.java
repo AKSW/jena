@@ -35,7 +35,6 @@ import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.other.G;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.ExecutionContext;
@@ -185,15 +184,15 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
 
         //Find all Features in the spatial index which are within the rough search envelope.
         SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
-        HashSet<Resource> features = searchEnvelope.check(spatialIndex);
+        HashSet<Node> features = searchEnvelope.check(spatialIndex);
 
         Var subjectVar = Var.alloc(subject.getName());
 
-        Stream<Resource> stream = features.stream();
+        Stream<Node> stream = features.stream();
         if (requireSecondFilter()) {
-            stream = stream.filter(feature -> checkBound(execCxt, feature.asNode()));
+            stream = stream.filter(feature -> checkBound(execCxt, feature));
         }
-        Iterator<Binding> iterator = stream.map(feature -> BindingFactory.binding(binding, subjectVar, feature.asNode()))
+        Iterator<Binding> iterator = stream.map(feature -> BindingFactory.binding(binding, subjectVar, feature))
                 .limit(limit)
                 .iterator();
         return QueryIterPlainWrapper.create(iterator, execCxt);
