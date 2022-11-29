@@ -32,6 +32,7 @@ import org.apache.jena.geosparql.implementation.registry.SRSRegistry;
 import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
@@ -105,6 +106,19 @@ public class SpatialIndex {
     }
 
     /**
+     * Built Spatial Index with provided STR tree.
+     *
+     * @param tree
+     * @param srsURI
+     * @throws SpatialIndexException
+     */
+    public SpatialIndex(STRtree tree, String srsURI) throws SpatialIndexException {
+        this.strTree = tree;
+        this.isBuilt = true;
+        this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
+    }
+
+    /**
      *
      * @return Information about the SRS used by the SpatialIndex.
      */
@@ -139,6 +153,13 @@ public class SpatialIndex {
     }
 
     /**
+     * Returns the number of items in the index.
+     */
+    public int getSize() {
+        return strTree.size();
+    }
+
+    /**
      * Items to add to an unbuilt Spatial Index.
      *
      * @param indexItems
@@ -160,14 +181,14 @@ public class SpatialIndex {
      */
     public final void insertItem(Envelope envelope, Resource item) throws SpatialIndexException {
         if (!isBuilt) {
-            strTree.insert(envelope, item);
+            strTree.insert(envelope, item.asNode());
         } else {
             throw new SpatialIndexException("SpatialIndex has been built and cannot have additional items.");
         }
     }
 
     @SuppressWarnings("unchecked")
-    public HashSet<Resource> query(Envelope searchEnvelope) {
+    public HashSet<Node> query(Envelope searchEnvelope) {
         if (!strTree.isEmpty()) {
             return new HashSet<>(strTree.query(searchEnvelope));
         } else {
@@ -238,9 +259,10 @@ public class SpatialIndex {
 
         if (spatialIndex.isEmpty()) {
             Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI);
-            save(spatialIndexFile, spatialIndexItems, srsURI);
+//            save(spatialIndexFile, spatialIndexItems, srsURI);
             spatialIndex = new SpatialIndex(spatialIndexItems, srsURI);
             spatialIndex.build();
+            save(spatialIndexFile, spatialIndex);
         }
 
         setSpatialIndex(dataset, spatialIndex);
@@ -428,7 +450,9 @@ public class SpatialIndex {
                 }
 
             }
+            nodeIter.close();
         }
+        stmtIt.close();
         return items;
     }
 
@@ -466,7 +490,45 @@ public class SpatialIndex {
                 throw new SpatialIndexException("Transformation Exception: " + geometryWrapper.getLexicalForm() + ". " + ex.getMessage());
             }
         }
+        resIt.close();
         return items;
+    }
+
+    /**
+     * Save SpatialIndex to file.
+     *
+     * @param spatialIndexFile the file being saved to
+     * @param index the spatial index
+     * @throws SpatialIndexException
+     */
+    public static final void save(File spatialIndexFile, SpatialIndex index) throws SpatialIndexException {
+
+        //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
+        if (spatialIndexFile != null) {
+            LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
+
+            String filename = spatialIndexFile.getAbsolutePath();
+            Path file = Path.of(filename);
+            Path tmpFile = IOX.uniqueDerivedPath(file, null);
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException ex) {
+                throw new SpatialIndexException("Failed to delete file: " + ex.getMessage());
+            }
+            try {
+                IOX.safeWriteOrCopy(file, tmpFile,
+                        out->{
+                            ObjectOutputStream oos = new ObjectOutputStream(out);
+                            oos.writeObject(index.srsInfo.getSrsURI());
+                            oos.writeObject(index.strTree);
+                        });
+            } catch (RuntimeIOException ex) {
+                throw new SpatialIndexException("Save Exception: " + ex.getMessage());
+            } finally {
+                LOGGER.info("Saving Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
+            }
+
+        }
     }
 
     /**
@@ -483,64 +545,18 @@ public class SpatialIndex {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
             //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
             try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(spatialIndexFile))) {
-                SpatialIndexStorage storage = (SpatialIndexStorage) in.readObject();
+                String srsUri = (String) in.readObject();
+                STRtree tree = (STRtree) in.readObject();
 
-                SpatialIndex spatialIndex = storage.getSpatialIndex();
+                SpatialIndex spatialIndex = new SpatialIndex(tree, srsUri);
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
                 return spatialIndex;
             } catch (ClassNotFoundException | IOException ex) {
                 throw new SpatialIndexException("Loading Exception: " + ex.getMessage(), ex);
             }
         } else {
+            LOGGER.info("File {} does not exist. Creating empty Spatial Index.", (spatialIndexFile != null ? spatialIndexFile.getAbsolutePath() : "null"));
             return new SpatialIndex();
-        }
-    }
-
-    /**
-     * Save SpatialIndex contents to file.
-     *
-     * @param spatialIndexFileURI
-     * @param spatialIndexItems
-     * @param srsURI
-     * @throws SpatialIndexException
-     */
-    public static final void save(String spatialIndexFileURI, Collection<SpatialIndexItem> spatialIndexItems, String srsURI) throws SpatialIndexException {
-        save(new File(spatialIndexFileURI), spatialIndexItems, srsURI);
-    }
-
-    /**
-     * Save SpatialIndex contents to file.
-     *
-     * @param spatialIndexFile
-     * @param spatialIndexItems
-     * @param srsURI
-     * @throws SpatialIndexException
-     */
-    public static final void save(File spatialIndexFile, Collection<SpatialIndexItem> spatialIndexItems, String srsURI) throws SpatialIndexException {
-
-        //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
-        if (spatialIndexFile != null) {
-            LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
-            SpatialIndexStorage storage = new SpatialIndexStorage(spatialIndexItems, srsURI);
-            String filename = spatialIndexFile.getAbsolutePath();
-            Path file = Path.of(filename);
-            Path tmpFile = IOX.uniqueDerivedPath(file, null);
-            try {
-                Files.deleteIfExists(file);
-            } catch (IOException ex) {
-                throw new SpatialIndexException("Failed to delete file: " + ex.getMessage());
-            }
-            try {
-                IOX.safeWriteOrCopy(file, tmpFile,
-                                    out->{
-                                        ObjectOutputStream oos = new ObjectOutputStream(out);
-                                        oos.writeObject(storage);
-                                    });
-            } catch (RuntimeIOException ex) {
-                throw new SpatialIndexException("Save Exception: " + ex.getMessage());
-            } finally {
-                LOGGER.info("Saving Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
-            }
         }
     }
 }
