@@ -236,11 +236,10 @@ public abstract class GenericPropertyFunction extends PFuncSimple {
             GeometryWrapper geom = GeometryWrapper.extract(geometryLiteral);
             GeometryWrapper transformedGeom = geom.transform(spatialIndex.getSrsInfo());
             Envelope searchEnvelope = transformedGeom.getEnvelope();
-            HashSet<Resource> features = spatialIndex.query(searchEnvelope);
+            HashSet<Node> features = spatialIndex.query(searchEnvelope, graph);
 
             //Check each of the Features that match the search.
-            for (Resource feature : features) {
-                Node featureNode = feature.asNode();
+            for (Node featureNode : features) {
 
                 //Ensure not already an asserted node.
                 if (!assertedNodes.contains(featureNode)) {
@@ -256,7 +255,7 @@ public abstract class GenericPropertyFunction extends PFuncSimple {
                 }
 
                 //Also test all Geometry of the Features. All, some or one Geometry may have matched.
-                List<Node> featureGeometryTriples = G.listSP(graph, feature.asNode(), Geo.HAS_GEOMETRY_NODE);
+                List<Node> featureGeometryTriples = G.listSP(graph, featureNode, Geo.HAS_GEOMETRY_NODE);
                 for ( Node geomNode : featureGeometryTriples) {
                     //Ensure not already an asserted node.
                     if (!assertedNodes.contains(geomNode)) {
