@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>5.0.0-SNAPSHOT</version>
+    <version>4.8.0</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -36,26 +36,24 @@
   <dependencies>
 
     <dependency>
+      <groupId>io.github.galbiston</groupId>
+      <artifactId>expiring-map</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.xml.bind</groupId>
+      <artifactId>jaxb-api</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-arq</artifactId>
-      <version>5.0.0-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.sis.core</groupId>
       <artifactId>sis-referencing</artifactId>
-    </dependency>
-    
-    <!-- Evntually this wil be:
-    <dependency>
-      <groupId>jakarta.xml.bind</groupId>
-      <artifactId>jakarta.xml.bind-api</artifactId>
-    </dependency>
-    -->
-    
-	<dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
     </dependency>
 
     <dependency>
@@ -83,6 +81,41 @@
       <artifactId>commons-collections4</artifactId>
     </dependency>
 
+    <!-- Kryo serialization via Apache Sedona -->
+    <dependency>
+      <groupId>org.apache.sedona</groupId>
+      <artifactId>sedona-core-3.0_2.13</artifactId>
+      <version>1.3.1-incubating</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>spark-core_2.12</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-minicluster</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.geotools</groupId>
+          <artifactId>gt-geotiff</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.geotools</groupId>
+          <artifactId>gt-coverage</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>com.esotericsoftware</groupId>
+      <artifactId>kryo</artifactId>
+      <version>4.0.2</version>
+    </dependency>
+
     <!-- Non-free; testing only -->
     <dependency>
       <groupId>org.apache.sis.non-free</groupId>
@@ -99,9 +132,11 @@
 
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
+      <artifactId>log4j-slf4j-impl</artifactId>
       <scope>test</scope>
     </dependency>
+
+
 
   </dependencies>
 
