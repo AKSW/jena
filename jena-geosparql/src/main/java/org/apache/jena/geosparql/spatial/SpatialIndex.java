@@ -23,6 +23,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
@@ -32,6 +35,7 @@ import org.apache.jena.geosparql.implementation.registry.SRSRegistry;
 import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
+import org.apache.jena.geosparql.spatial.serde.JtsKryoRegistrator;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -503,7 +507,6 @@ public class SpatialIndex {
      */
     public static final void save(File spatialIndexFile, SpatialIndex index) throws SpatialIndexException {
 
-        //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
         if (spatialIndexFile != null) {
             LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
 
@@ -516,11 +519,15 @@ public class SpatialIndex {
                 throw new SpatialIndexException("Failed to delete file: " + ex.getMessage());
             }
             try {
+                Kryo kryo = new Kryo();
+                JtsKryoRegistrator.registerClasses(kryo);
+
                 IOX.safeWriteOrCopy(file, tmpFile,
                         out->{
-                            ObjectOutputStream oos = new ObjectOutputStream(out);
-                            oos.writeObject(index.srsInfo.getSrsURI());
-                            oos.writeObject(index.strTree);
+                            Output output = new Output(out);
+                            kryo.writeObject(output, index.srsInfo.getSrsURI());
+                            kryo.writeObject(output, index.strTree);
+                            output.close();
                         });
             } catch (RuntimeIOException ex) {
                 throw new SpatialIndexException("Save Exception: " + ex.getMessage());
@@ -540,18 +547,20 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static final SpatialIndex load(File spatialIndexFile) throws SpatialIndexException {
+        Kryo kryo = new Kryo();
+        JtsKryoRegistrator.registerClasses(kryo);
 
         if (spatialIndexFile != null && spatialIndexFile.exists()) {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
-            //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
-            try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(spatialIndexFile))) {
-                String srsUri = (String) in.readObject();
-                STRtree tree = (STRtree) in.readObject();
+
+            try (Input input = new Input(new FileInputStream(spatialIndexFile))) {
+                String srsUri = kryo.readObject(input, String.class);
+                STRtree tree = kryo.readObject(input, STRtree.class);
 
                 SpatialIndex spatialIndex = new SpatialIndex(tree, srsUri);
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
                 return spatialIndex;
-            } catch (ClassNotFoundException | IOException ex) {
+            } catch (IOException ex) {
                 throw new SpatialIndexException("Loading Exception: " + ex.getMessage(), ex);
             }
         } else {
