@@ -154,7 +154,7 @@ public class DatasetGraphTDB extends DatasetGraphStorage
         if (graphIndex != null && graphIndex.getRangeIndex() instanceof BPlusTree) {
             BPlusTree bpt = (BPlusTree) graphIndex.getRangeIndex();
             Iterator<NodeId> distinctGraphNodeIds
-                    = Iter.iter(bpt.distinctByKeyPrefix(NodeId.SIZE)).map(r -> NodeIdFactory.get(r.getKey(), NodeId.SIZE));
+                    = Iter.iter(bpt.distinctByKeyPrefix(NodeId.SIZE)).map(r -> NodeIdFactory.get(r.getKey(), 0));
             return NodeLib.nodes(quads.getNodeTable(), distinctGraphNodeIds);
         }
 
