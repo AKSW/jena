@@ -152,11 +152,13 @@ public class TestTransformPathFlatten {
         testDefaultTransform(op1, op2);
     }
 
+    /*
     @Test public void pathFlatten_alt_01() {
         Op op1 = path("?x", ":p1|:p2", ":T1");
         // Basic flatten does not flatten alternative paths
         testDefaultTransform(op1, op1);
     }
+    */
 
     @Test public void pathFlatten_alt_02() {
         Op op1 = path("?x", ":p1|:p2", ":T1");
@@ -451,7 +453,7 @@ public class TestTransformPathFlatten {
         Op op2 = op("(union"
                 ,"  (bgp (triple ?x :p1 ?y))"
                 ,"  (bgp (triple ?x :p2 ?y)))");
-        test(op1, op2);
+        testDefaultTransform(op1, op2);
     }
 
     // GH-1616 : expand P_Alt to OpUnion, then P_ReverseLink to OpBGP
@@ -462,7 +464,7 @@ public class TestTransformPathFlatten {
                 ,"  (union"
                 ,"    (bgp (triple ??P0 :p1 ?y))"
                 ,"    (bgp (triple ?y :p2 ??P0))))");
-        test(op1, op2);
+        testDefaultTransform(op1, op2);
     }
 
     private static Op path(String s, String pathStr, String o) {
