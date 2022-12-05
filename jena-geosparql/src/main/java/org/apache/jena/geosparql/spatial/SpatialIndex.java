@@ -570,7 +570,7 @@ public class SpatialIndex {
     static class SNodeProtobuf implements Serializable {
         private static final long serialVersionUID = 5312954454377250166L;
         private transient Node node;
-        private PB_RDF.RDF_Term.Builder term_builder = PB_RDF.RDF_Term.newBuilder();
+        private static final PB_RDF.RDF_Term.Builder term_builder = PB_RDF.RDF_Term.newBuilder();
 
         public SNodeProtobuf(Node node) { this.node = node; }
         public Node getNode()   { return node; }
