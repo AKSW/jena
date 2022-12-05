@@ -151,7 +151,7 @@ public class FusekiMain extends CmdARQ {
         add(argFile, "--file=FILE",
             "Create an in-memory, non-persistent dataset for the server, initialised with the contents of the file");
         add(argTDB2mode, "--tdb2",
-            "Use TDB2 for command line persistent datasets (dfault is TDB1)");
+            "Use TDB2 for command line persistent datasets (default is TDB1)");
         add(argTDB, "--loc=DIR",
             "Use an existing TDB database (or create if does not exist)");
         add(argMemTDB, "--memTDB",
@@ -480,8 +480,10 @@ public class FusekiMain extends CmdARQ {
     @Override
     protected void exec() {
         try {
+            Logger log = Fuseki.serverLog;
+            FusekiMainInfo.logServerCode(log);
             FusekiServer server = buildServer(serverConfig);
-            infoCmd(server);
+            infoCmd(server, log);
             try {
                 server.start();
             } catch (FusekiException ex) {
@@ -584,13 +586,9 @@ public class FusekiMain extends CmdARQ {
     }
 
     /** Information from the command line setup */
-    private void infoCmd(FusekiServer server) {
+    private void infoCmd(FusekiServer server, Logger log) {
         if ( super.isQuiet() )
             return;
-
-        Logger log = Fuseki.serverLog;
-
-        FusekiMainInfo.logServerCode(log);
 
         if ( serverConfig.empty ) {
             FmtLog.info(log, "No SPARQL datasets services");
