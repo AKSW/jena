@@ -37,6 +37,9 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.riot.protobuf.ProtobufConvert;
+import org.apache.jena.riot.protobuf.wire.PB_RDF;
+import org.apache.jena.riot.system.SNode;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
@@ -502,6 +505,7 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static final void save(File spatialIndexFile, SpatialIndex index) throws SpatialIndexException {
+        org.apache.jena.sys.Serializer.setNodeSerializer(SNodeProtobuf::new);
 
         //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
         if (spatialIndexFile != null) {
@@ -529,6 +533,7 @@ public class SpatialIndex {
             }
 
         }
+        org.apache.jena.sys.Serializer.setNodeSerializer(SNode::new);
     }
 
     /**
@@ -540,7 +545,7 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static final SpatialIndex load(File spatialIndexFile) throws SpatialIndexException {
-
+        org.apache.jena.sys.Serializer.setNodeSerializer(SNodeProtobuf::new);
         if (spatialIndexFile != null && spatialIndexFile.exists()) {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
             //Cannot directly store the SpatialIndex due to Resources not being serializable, use SpatialIndexStorage class.
@@ -553,10 +558,34 @@ public class SpatialIndex {
                 return spatialIndex;
             } catch (ClassNotFoundException | IOException ex) {
                 throw new SpatialIndexException("Loading Exception: " + ex.getMessage(), ex);
+            } finally {
+                org.apache.jena.sys.Serializer.setNodeSerializer(SNode::new);
             }
         } else {
             LOGGER.info("File {} does not exist. Creating empty Spatial Index.", (spatialIndexFile != null ? spatialIndexFile.getAbsolutePath() : "null"));
             return new SpatialIndex();
         }
+    }
+
+    static class SNodeProtobuf implements Serializable {
+        private static final long serialVersionUID = 5312954454377250166L;
+        private transient Node node;
+        private PB_RDF.RDF_Term.Builder term_builder = PB_RDF.RDF_Term.newBuilder();
+
+        public SNodeProtobuf(Node node) { this.node = node; }
+        public Node getNode()   { return node; }
+
+        private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+            PB_RDF.RDF_Term rdfTerm = ProtobufConvert.toProtobuf(node, term_builder);
+            rdfTerm.writeTo(out);
+        }
+
+        private void readObject(java.io.ObjectInputStream in) throws IOException {
+            PB_RDF.RDF_Term rdfTerm = PB_RDF.RDF_Term.parseFrom(in);
+            node = ProtobufConvert.convert(rdfTerm);
+        }
+
+        Object readResolve() throws ObjectStreamException
+        { return node; }
     }
 }
