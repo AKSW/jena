@@ -131,6 +131,9 @@ class BPTreeDistinctKeyPrefixIterator implements Iterator<Record> {
 
     protected Iterator<Record> getRecordsIterator(BPTreeRecords records) {
         records.bpTree.startReadBlkMgr();
+        if (!records.hasAnyKeys()) {
+            return Iter.nullIterator();
+        }
         Iterator<Record> iter;
         // Check whether we need to scan the whole page or can process it by skipping or singleton yield
         Record lowRecord = records.getLowRecord();
