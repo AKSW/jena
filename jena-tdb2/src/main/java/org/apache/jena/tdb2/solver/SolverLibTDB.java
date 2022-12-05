@@ -27,6 +27,8 @@ import java.util.function.Predicate;
 import org.apache.jena.atlas.iterator.Iter;
 import org.apache.jena.atlas.lib.tuple.Tuple;
 import org.apache.jena.atlas.lib.tuple.TupleFactory;
+import org.apache.jena.dboe.base.record.Record;
+import org.apache.jena.dboe.trans.bplustree.BPlusTree;
 import org.apache.jena.graph.Node;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.ExecutionContext;
@@ -40,9 +42,11 @@ import org.apache.jena.sparql.engine.iterator.QueryIterNullIterator;
 import org.apache.jena.tdb2.lib.NodeLib;
 import org.apache.jena.tdb2.store.DatasetGraphTDB;
 import org.apache.jena.tdb2.store.NodeId;
+import org.apache.jena.tdb2.store.NodeIdFactory;
 import org.apache.jena.tdb2.store.nodetable.NodeTable;
 import org.apache.jena.tdb2.store.nodetupletable.NodeTupleTable;
 import org.apache.jena.tdb2.store.tupletable.TupleIndex;
+import org.apache.jena.tdb2.store.tupletable.TupleIndexRecord;
 import org.apache.jena.tdb2.store.tupletable.TupleTable;
 import org.apache.jena.tdb2.sys.TDBInternal;
 import org.slf4j.Logger;
@@ -153,26 +157,34 @@ public class SolverLibTDB
 
         TupleIndex idx = findGraphIndex(ntt.getTupleTable(), "G");
 
-        boolean needDistinct;
-        Iterator<Tuple<NodeId>> iter1;
+        Iterator<NodeId> iter3;
 
-        if ( idx == null ) {
-            iter1 = ntt.findAll();
-            needDistinct = true;
+        if (filter == null
+                && idx instanceof TupleIndexRecord
+                && ((TupleIndexRecord) idx).getRangeIndex() instanceof BPlusTree) {
+            iter3 = Iter.iter(((BPlusTree) ((TupleIndexRecord) idx).getRangeIndex()).distinctByKeyPrefix(NodeId.SIZE))
+                    .map(r -> NodeIdFactory.get(r.getKey(), 0));
+        } else {
+            Iterator<Tuple<NodeId>> iter1;
+            boolean needDistinct;
+
+            if (idx == null) {
+                iter1 = ntt.findAll();
+                needDistinct = true;
+            } else {
+                iter1 = idx.find(TupleANY);
+                needDistinct = false;
+            }
+
+            if (filter != null)
+                iter1 = Iter.filter(iter1, filter);
+
+            Iterator<NodeId> iter2 = Iter.map(iter1, t -> t.get(0));
+            // Project is cheap - don't brother wrapping iter1
+            iter2 = makeAbortable(iter2, killList);
+
+            iter3 = (needDistinct) ? Iter.distinct(iter2) : Iter.distinctAdjacent(iter2);
         }
-        else {
-            iter1 = idx.find(TupleANY);
-            needDistinct = false;
-        }
-
-        if ( filter != null )
-            iter1 = Iter.filter(iter1, filter);
-
-        Iterator<NodeId> iter2 = Iter.map(iter1, t -> t.get(0));
-        // Project is cheap - don't brother wrapping iter1
-        iter2 = makeAbortable(iter2, killList);
-
-        Iterator<NodeId> iter3 = (needDistinct) ? Iter.distinct(iter2) : Iter.distinctAdjacent(iter2);
         iter3 = makeAbortable(iter3, killList);
 
         Iterator<Node> iter4 = NodeLib.nodes(ds.getQuadTable().getNodeTupleTable().getNodeTable(), iter3);
