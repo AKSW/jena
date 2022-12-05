@@ -757,8 +757,8 @@ public class SSE {
     }
 
     public static void write(IndentedWriter out, Node node) {
-        WriterNode.output(IndentedWriter.stdout, node, sCxt(getPrefixMapWrite()));
-        IndentedWriter.stdout.flush();
+        WriterNode.output(out, node, sCxt(getPrefixMapWrite()));
+        out.flush();
     }
 
     /** Return a SerializationContext appropriate for the graph */

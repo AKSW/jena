@@ -28,9 +28,15 @@ import org.apache.thrift.protocol.TProtocol;
 public class SerializerRDF {
     
     public static void init() {
-        org.apache.jena.sys.Serializer.setNodeSerializer(SNode::new);
-        org.apache.jena.sys.Serializer.setTripleSerializer(STriple::new);
-        org.apache.jena.riot.system.Serializer.setQuadSerializer(SQuad::new);
+//        org.apache.jena.sys.Serializer.setNodeSerializer(SNode::new);
+//        org.apache.jena.sys.Serializer.setTripleSerializer(STriple::new);
+//        org.apache.jena.riot.system.Serializer.setQuadSerializer(SQuad::new);
+//        org.apache.jena.sys.Serializer.setNodeSerializer(SNodeSSE::new);
+//        org.apache.jena.sys.Serializer.setTripleSerializer(STripleSSE::new);
+//        org.apache.jena.riot.system.Serializer.setQuadSerializer(SQuadSSE::new);
+        org.apache.jena.sys.Serializer.setNodeSerializer(SNodeProtobuf::new);
+        org.apache.jena.sys.Serializer.setTripleSerializer(STripleProtobuf::new);
+        org.apache.jena.riot.system.Serializer.setQuadSerializer(SQuadProtobuf::new);
     }
 
     /* <PRE>

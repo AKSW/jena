@@ -48,6 +48,10 @@ public class ProtobufConvert
     static final BigInteger MAX_I = BigInteger.valueOf(Long.MAX_VALUE) ;
     static final BigInteger MIN_I = BigInteger.valueOf(Long.MIN_VALUE) ;
 
+    static RDF_Term.Builder n = RDF_Term.newBuilder();
+    static RDF_Triple.Builder t = RDF_Triple.newBuilder();
+    static RDF_Quad.Builder q = RDF_Quad.newBuilder();
+
     /** Attempt to encode a node by value (integer, decimal, double) into an RDF_term.
      * @param node
      * @param term
@@ -357,7 +361,6 @@ public class ProtobufConvert
     }
 
     public static RDF_Term convert(Node node, PrefixMap pmap, boolean allowValues) {
-        RDF_Term.Builder n = RDF_Term.newBuilder();
         return toProtobuf(node, pmap, n, allowValues) ;
     }
 
@@ -376,7 +379,6 @@ public class ProtobufConvert
     }
 
     public static RDF_Triple convert(Triple triple, PrefixMap pmap, boolean allowValues) {
-        RDF_Triple.Builder t = RDF_Triple.newBuilder();
         RDF_Term s = convert(triple.getSubject(), pmap, allowValues) ;
         RDF_Term p = convert(triple.getPredicate(), pmap, allowValues) ;
         RDF_Term o = convert(triple.getObject(), pmap, allowValues) ;
@@ -395,14 +397,13 @@ public class ProtobufConvert
     }
 
     public static RDF_Quad convert(Quad quad, PrefixMap pmap, boolean allowValues) {
-        RDF_Quad.Builder q = RDF_Quad.newBuilder();
         RDF_Term g = null ;
         if ( quad.getGraph() != null )
             g = convert(quad.getGraph(), pmap, allowValues) ;
         RDF_Term s = convert(quad.getSubject(), pmap, allowValues) ;
         RDF_Term p = convert(quad.getPredicate(), pmap, allowValues) ;
         RDF_Term o = convert(quad.getObject(), pmap, allowValues) ;
-        if ( g != null )
+        //if ( g != null )
             q.setG(g) ;
         q.setS(s) ;
         q.setP(p) ;
