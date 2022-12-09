@@ -37,6 +37,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.riot.other.G;
 import org.apache.jena.sparql.core.NamedGraph;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.core.Var;
@@ -133,8 +134,8 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
             } else {
                 //Check for Geo predicates against the feature when no geometry literals found.
                 if (graph.contains(subject, SpatialExtension.GEO_LAT_NODE, null) && graph.contains(subject, SpatialExtension.GEO_LON_NODE, null)) {
-                    Node lat = graph.find(subject, SpatialExtension.GEO_LAT_NODE, null).next().getObject();
-                    Node lon = graph.find(subject, SpatialExtension.GEO_LON_NODE, null).next().getObject();
+                    Node lat = G.getSP(graph, subject, SpatialExtension.GEO_LAT_NODE);
+                    Node lon = G.getSP(graph, subject, SpatialExtension.GEO_LON_NODE);
                     Node latLonGeometryLiteral = ConvertLatLon.toNode(lat, lon);
                     Triple triple = Triple.create(subject, Geo.HAS_GEOMETRY_NODE, latLonGeometryLiteral);
                     spatialTriples.addIterator(Arrays.asList(triple).iterator());
