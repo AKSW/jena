@@ -28,7 +28,7 @@ import java.util.function.Predicate;
 import org.apache.jena.atlas.iterator.Iter ;
 import org.apache.jena.graph.Graph ;
 import org.apache.jena.graph.Node ;
-import org.apache.jena.graph.Triple ;
+import org.apache.jena.riot.other.G;
 import org.apache.jena.sparql.ARQInternalErrorException ;
 import org.apache.jena.sparql.algebra.Op ;
 import org.apache.jena.sparql.algebra.op.OpBGP ;
@@ -175,10 +175,10 @@ public class PathLib
         return new QueryIterYieldN(count, binding, execCxt) ;
     }
 
-    // Brute force evaluation of a TriplePath where neither subject nor object are bound
+    // Evaluation of a TriplePath where neither subject nor object are bound
     private static QueryIterator execUngroundedPath(Binding binding, Graph graph, Var sVar, Path path, Var oVar, ExecutionContext execCxt) {
-        // Starting points.
-        Iterator<Node> iter = determineUngroundedStartingSet(graph, path, execCxt) ;
+        // Starting at the subject, forward direction path
+        Iterator<Node> iter = ungroundedStartingSet(graph, path, execCxt) ;
         QueryIterator input = new QueryIterExtendByVar(binding, sVar, iter, execCxt);
         Function<Binding, QueryIterator> mapper = b -> {
             Iterator<Node> pathIter = PathEval.eval(graph, b.get(sVar), path, execCxt.getContext());
@@ -189,127 +189,95 @@ public class PathLib
     }
 
     private static QueryIterator execUngroundedPathSameVar(Binding binding, Graph graph, Var var, Path path, ExecutionContext execCxt) {
-        // Try each end, ungrounded.
-        Iterator<Node> iter = determineUngroundedStartingSet(graph, path, execCxt) ;
+        // Starting at the subject, forward direction path
+        Iterator<Node> iter = ungroundedStartingSet(graph, path, execCxt) ;
         QueryIterator input = new QueryIterExtendByVar(binding, var, iter, execCxt);
         Function<Binding, QueryIterator> mapper = b -> {
             Node n = b.get(var);
             int x = existsPath(graph, n, path, n, execCxt);
             if (x <= 0)
-                return null;
+                return QueryIterNullIterator.create(execCxt);
             Binding b2 = BindingFactory.binding(binding, var, n);
             return new QueryIterYieldN(x, b2, execCxt);
         };
         return QueryIter.flatMap(input, mapper, execCxt);
     }
 
-    private static Iterator<Node> determineUngroundedStartingSet(Graph graph, Path path, ExecutionContext execCxt) {
-        // Find a better set of seed values than "everything"
-        //    (:p+) and (^:p)+
-        //  :p* need everything because it is always the case that "<x> :p* <x>"
-        if ( path instanceof P_OneOrMore1 || path instanceof P_OneOrMoreN ) {
-            Path subPath = ((P_Path1)path).getSubPath() ;
-            if ( subPath instanceof P_Link ) {
-                // :predicate+
-                // If a property functions,
-                P_Link link = (P_Link)subPath ;
-                if ( ! isPropertyFunction(link.getNode(), execCxt.getContext()) ) {
-                    Iterator<Triple> sIter = graph.find(null, link.getNode(), null) ;
-                    return Iter.iter(sIter).distinctAdjacent().map(Triple::getSubject).distinct() ;
-                }
-            } else {
-                if ( subPath instanceof P_Inverse ) {
-                    P_Inverse pInv = (P_Inverse)subPath ;
-                    if ( pInv.getSubPath() instanceof P_Link ) {
-                        //  (^:predicate)+
-                        P_Link link = (P_Link)(pInv.getSubPath()) ;
-                        if ( ! isPropertyFunction(link.getNode(), execCxt.getContext()) ) {
-                            Iterator<Triple> sIter = graph.find(null, link.getNode(), null) ;
-                            return Iter.iter(sIter).distinctAdjacent().map(Triple::getObject).distinct() ;
-                        }
-                    }
-                }
-            }
-        } else if (path instanceof P_Alt) {
-            // check if the alternatives are
-            // i) only links or inverted links :p1|:p2|^:p3
-            // ii) at least something that is currently being handled smarter here than get all nodes in graph
-            List<Path> alternatives = getAlternatives(path);
-            if (alternatives.stream().allMatch(alt ->
-                    alt instanceof P_Link ||
-                            (alt instanceof P_Inverse && ((P_Inverse) alt).getSubPath() instanceof P_Link)
-            )) {// TODO case ii)
-                Iter<Node> iter = Iter.empty();
-
-                Path left = ((P_Alt) path).getLeft();
-                if (left instanceof P_Link) {
-                    P_Link link = (P_Link) left;
-                    if (!isPropertyFunction(link.getNode(), execCxt.getContext())) {
-                        Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
-                        iter = Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getSubject).distinct());
-                    }
-                } else if (left instanceof P_Inverse) {
-                    P_Inverse pInv = (P_Inverse) left;
-                    if (pInv.getSubPath() instanceof P_Link) {
-                        P_Link link = (P_Link) (pInv.getSubPath());
-                        if (!isPropertyFunction(link.getNode(), execCxt.getContext())) {
-                            Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
-                            Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getObject).distinct());
-                        }
-                    }
-                } else {
-                    iter = Iter.concat(iter, determineUngroundedStartingSet(graph, left, execCxt));
-                }
-
-                Path right = ((P_Alt) path).getRight();
-                if (right instanceof P_Link) {
-                    P_Link link = (P_Link) right;
-                    if (!isPropertyFunction(link.getNode(), execCxt.getContext())) {
-                        Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
-                        iter = Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getSubject).distinct());
-                    }
-                } else if (right instanceof P_Inverse) {
-                    P_Inverse pInv = (P_Inverse) right;
-                    if (pInv.getSubPath() instanceof P_Link) {
-                        P_Link link = (P_Link) (pInv.getSubPath());
-                        if (!isPropertyFunction(link.getNode(), execCxt.getContext())) {
-                            Iterator<Triple> sIter = graph.find(null, link.getNode(), null);
-                            Iter.concat(iter, Iter.iter(sIter).distinctAdjacent().map(Triple::getObject).distinct());
-                        }
-                    }
-                } else {
-                    iter = Iter.concat(iter, determineUngroundedStartingSet(graph, right, execCxt));
-                }
-
-                return iter;
-            }
-        }
-        // No idea - everything.
+    /** Find a set of seed values.
+     * <p>
+     * The result must include all possibilities - it can include addition
+     * elements which will be tested and rejected in the path evaluation.
+     */
+    private static Iterator<Node> ungroundedStartingSet(Graph graph, Path path, ExecutionContext execCxt) {
+        Iterator<Node> iter = calcStartingSet(graph, path, true, execCxt);
+        if ( iter != null )
+            return iter;
+        // If we could not find a better iterator:
         return GraphUtils.allNodes(graph) ;
     }
 
-    private static List<Path> getAlternatives(Path path) {
-        List<Path> alternatives = new ArrayList<>();
-
-        if (path instanceof P_Alt) {
-            Path left = ((P_Alt) path).getLeft();
-            if (left instanceof P_Alt) {
-                alternatives.addAll(getAlternatives((P_Alt) left));
-            } else {
-                alternatives.add(left);
+    /** Find a better set iterator of seed values than "everything" else return null */
+    private static Iterator<Node> calcStartingSet(Graph graph, Path path, boolean forwards, ExecutionContext execCxt) {
+        if ( path instanceof P_Link ) {
+            // P_Link that isn't a property function.
+            Node p = ((P_Link)path).getNode();
+            if ( isPropertyFunction(p, execCxt.getContext()) )
+                return null;
+            Iterator<Node> x = forwards ? G.iterSubjectsOfPredicate(graph, p) : G.iterObjectsOfPredicate(graph, p);
+            return x;
+        } else if ( path instanceof P_Inverse ) {
+            // ^(path) :: Flip and try inner
+            Path subPath = ((P_Inverse)path).getSubPath();
+            return calcStartingSet(graph, subPath, !forwards, execCxt);
+        } else if ( path instanceof P_Seq ) {
+            // path1 / path2 :: try the first step.
+            Path subPath = ((P_Seq)path).getLeft();
+            return calcStartingSet(graph, subPath, forwards, execCxt);
+        } else if (path instanceof P_Alt ) {
+            // path1 | path2 :: Combine both sides - must work for both sides of the "alt"
+            Iterator<Node> x1 = calcStartingSet(graph, ((P_Path2)path).getLeft(), forwards, execCxt);
+            if ( x1 == null )
+                return null;
+            Iterator<Node> x2 = calcStartingSet(graph, ((P_Path2)path).getRight(), forwards, execCxt);
+            if ( x2 == null )
+                return null;
+            return Iter.distinct(Iter.concat(x1, x2));
+        } else if ( path instanceof P_OneOrMore1 || path instanceof P_OneOrMoreN ) {
+            // path+ and (^path)+ :: starting set is the starting set of the first step of the path.
+            Path subPath = ((P_Path1)path).getSubPath() ;
+            if ( subPath instanceof P_Link ) {
+                return calcStartingSet(graph, subPath, forwards, execCxt);
             }
-
-            Path right = ((P_Alt) path).getRight();
-            if (right instanceof P_Alt) {
-                alternatives.addAll(getAlternatives((P_Alt) right));
-            } else {
-                alternatives.add(right);
+            if ( subPath instanceof P_Inverse ) {
+                // Reversed.
+                P_Inverse pInv = (P_Inverse)subPath ;
+                Path reversed = pInv.getSubPath() ;
+                return calcStartingSet(graph, reversed, !forwards, execCxt);
             }
+        } else if ( path instanceof P_FixedLength ) {
+            // path{N} :: Use first step.
+            P_FixedLength fixedLengthPath = (P_FixedLength)path;
+            if ( fixedLengthPath.getCount() <= 0 ) {
+                // {0} which is "everything".
+                return null;
+            }
+            Path step = ((P_FixedLength)path).getSubPath();
+            return calcStartingSet(graph, step, forwards, execCxt);
+        } else if ( path instanceof P_Mod ) {
+            // path{N,M} :: Use first step.
+            P_Mod modPath = (P_Mod)path;
+            if ( modPath.getMin() == 0 || modPath.getMin() == P_Mod.UNSET ) {
+                // {0,} and {,N} which is "everything".
+                return null;
+            }
+            Path step = modPath.getSubPath();
+            return calcStartingSet(graph, step, forwards, execCxt);
         }
-
-        return alternatives;
+        // Others -- P_ZeroOrMore1, P_ZeroOrMoreN, P_ZeroOrOne
+        //  :p* need everything because it is always the case that "<x> :p* <x>"
+        return null;
     }
-    
+
     private static boolean isPropertyFunction(Node node, Context context) {
         if ( ! node.isURI() )
             return false ;

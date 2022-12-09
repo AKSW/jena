@@ -41,7 +41,7 @@ import org.junit.Test;
 public class TestTransformPathFlatten {
     private static String pre = "(prefix ((: <http://example/>))";
     private static String post =  ")";
-    
+
     private static Prologue prologue;
 
     /**
@@ -61,13 +61,13 @@ public class TestTransformPathFlatten {
         PathCompiler.resetForTest();
         TransformPathFlattenAlgebra.resetForTest();
     }
-    
+
     @Test public void pathFlatten_00() {
         Op op1 = path(":x0", ":p0", ":T0");
         Op op2 = op("(bgp (triple :x0 :p0 :T0))");
         testDefaultTransform(op1, op2);
     }
-    
+
     @Test public void pathFlatten_01() {
         Op op1 = path(":x1", ":q1/:p1*", ":T1");
         Op op2 = op("(sequence"
@@ -80,8 +80,8 @@ public class TestTransformPathFlatten {
     @Test public void pathFlatten_01_algebra() {
         Op op1 = path(":x1", ":q1/:p1*", ":T1");
         Op op2 = op("(join"
-                ,"  (triple :x1 :q1 ??Q0)"
-                ,"  (path ??Q0 (path* :p1) :T1))"
+                   ,"  (triple :x1 :q1 ??Q0)"
+                   ,"  (path ??Q0 (path* :p1) :T1))"
         );
         testAlgebraTransform(op1, op2);
     }
@@ -89,14 +89,14 @@ public class TestTransformPathFlatten {
     @Test public void pathFlatten_01b_algebra() {
         Op op1 = path(":x1", ":q1/:p1*", ":T1");
         Op op2 = op("(sequence"
-                ,"  (triple :x1 :q1 ??Q0)"
-                ,"  (path ??Q0 (path* :p1) :T1))"
+                   ,"  (triple :x1 :q1 ??Q0)"
+                   ,"  (path ??Q0 (path* :p1) :T1))"
         );
         Context context = new Context();
         context.set(ARQ.optPathFlattenAlgebra, true);
         testOptimise(op1, op2, context);
     }
-    
+
     @Test public void pathFlatten_02() {
         Op op1 = path("?x", ":q1/:p1*", ":T1");
         // JENA-1918 : order of sequence is grounded first.
@@ -111,8 +111,8 @@ public class TestTransformPathFlatten {
         Op op1 = path("?x", ":q1/:p1*", ":T1");
         // JENA-1918 : order of sequence is grounded first.
         Op op2 = op("(join"
-                ,"  (path ??Q0 (path* :p1) :T1)"
-                ,"  (triple ?x :q1 ??Q0))"
+                   ,"  (path ??Q0 (path* :p1) :T1)"
+                   ,"  (triple ?x :q1 ??Q0))"
         );
         testAlgebraTransform(op1, op2);
     }
@@ -121,15 +121,15 @@ public class TestTransformPathFlatten {
         Op op1 = path("?x", ":q1/:p1*", ":T1");
         // JENA-1918 : order of sequence is grounded first.
         Op op2 = op("(sequence"
-                ,"  (path ??Q0 (path* :p1) :T1)"
-                ,"  (triple ?x :q1 ??Q0))"
+                   ,"  (path ??Q0 (path* :p1) :T1)"
+                   ,"  (triple ?x :q1 ??Q0))"
         );
         Context context = new Context();
         context.set(ARQ.optPathFlattenAlgebra, true);
         testOptimise(op1, op2, context);
     }
 
-    @Test public void pathFlatten_10() { 
+    @Test public void pathFlatten_10() {
         Op op1 = path("?x", ":p1{2}", ":T1");
         // JENA-1918 : order of sequence is grounded first.
         Op op2 = op("(bgp"
@@ -140,7 +140,7 @@ public class TestTransformPathFlatten {
         testDefaultTransform(op1, op2);
     }
 
-    @Test public void pathFlatten_11() { 
+    @Test public void pathFlatten_11() {
         Op op1 = path("?x", ":p1{2,}", ":T1");
         Op op2 = op
             ("(sequence"
@@ -152,13 +152,11 @@ public class TestTransformPathFlatten {
         testDefaultTransform(op1, op2);
     }
 
-    /*
     @Test public void pathFlatten_alt_01() {
         Op op1 = path("?x", ":p1|:p2", ":T1");
         // Basic flatten does not flatten alternative paths
         testDefaultTransform(op1, op1);
     }
-    */
 
     @Test public void pathFlatten_alt_02() {
         Op op1 = path("?x", ":p1|:p2", ":T1");
@@ -446,41 +444,21 @@ public class TestTransformPathFlatten {
         Op op1 = path(":T1", ":p{3,0}", "?x");
         testAlgebraTransform(op1, null);
     }
-
-    // JENA-1300 : expand P_Alt to OpUnion
-    @Test public void pathFlatten_20() {
-        Op op1 = path("?x", ":p1|:p2", "?y");
-        Op op2 = op("(union"
-                ,"  (bgp (triple ?x :p1 ?y))"
-                ,"  (bgp (triple ?x :p2 ?y)))");
-        testDefaultTransform(op1, op2);
-    }
-
-    // GH-1616 : expand P_Alt to OpUnion, then P_ReverseLink to OpBGP
-    @Test public void pathFlatten_21() {
-        Op op1 = path("?x", ":p0*/(:p1|^:p2)", "?y");
-        Op op2 = op("(sequence"
-                ,"  (path ?x (path* :p0) ??P0)"
-                ,"  (union"
-                ,"    (bgp (triple ??P0 :p1 ?y))"
-                ,"    (bgp (triple ?y :p2 ??P0))))");
-        testDefaultTransform(op1, op2);
-    }
-
+    
     private static Op path(String s, String pathStr, String o) {
         Path path = PathParser.parse(pathStr, prologue);
         TriplePath tp = new TriplePath(SSE.parseNode(s), path, SSE.parseNode(o));
         return new OpPath(tp);
     }
-    
+
     private static Op op(String...opStr) {
         String s = strjoinNL(opStr);
         String input = pre + s + post;
         return SSE.parseOp(input);
     }
-    
+
     private static void testDefaultTransform(Op opInput, Op opExpected) {
-        testPathTransform(opInput, opExpected, new TransformPathFlattern());
+        testPathTransform(opInput, opExpected, new TransformPathFlatten());
     }
 
     /**
