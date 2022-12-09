@@ -95,8 +95,9 @@ import org.apache.jena.shex.sys.ValidationContext;
                     break;
                 }
             }
-            // This partition works.
-            if ( success )
+
+            // If this partition satisfies the nested expressions, test SemActs.
+            if ( success && eachOf.testSemanticActions(vCxt, matchables) )
                 return true;
         }
         return false;
@@ -121,11 +122,8 @@ import org.apache.jena.shex.sys.ValidationContext;
 //        if ( triples.stream().noneMatch(t->predicateToTripleExprs.containsKey(t.getPredicate())) )
 //            return null;
 
-
         // Start. One empty partition
         List<Set<Triple>> emptyPartial = emptyPartition(tripleExprs);
-
-
         List<List<Set<Triple>>> partials = new ArrayList<>();
         partials.add(emptyPartial);
 
@@ -177,5 +175,4 @@ import org.apache.jena.shex.sys.ValidationContext;
         }
         return partition;
     }
-
 }
