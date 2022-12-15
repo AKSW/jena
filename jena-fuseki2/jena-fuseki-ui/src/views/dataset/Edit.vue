@@ -261,7 +261,8 @@ export default {
       this.loadingGraph = true
       this.selectedGraph = graphName
       try {
-        const result = await this.$fusekiService.fetchGraph(this.datasetName, graphName)
+        const dataEndpoint = this.services['gsp-rw']['srv.endpoints'].find(endpoint => endpoint !== '') || ''
+        const result = await this.$fusekiService.fetchGraph(`${this.datasetName}/${dataEndpoint}`, graphName)
         this.code = result.data
       } catch (error) {
         displayError(this, error)
@@ -277,7 +278,8 @@ export default {
       if (!this.saveGraphDisabled) {
         this.loadingGraph = true
         try {
-          await this.$fusekiService.saveGraph(this.datasetName, this.selectedGraph, this.content)
+          const dataEndpoint = this.services['gsp-rw']['srv.endpoints'].find(endpoint => endpoint !== '') || ''
+          await this.$fusekiService.saveGraph(`${this.datasetName}/${dataEndpoint}`, this.selectedGraph, this.content)
           displayNotification(this, `Graph updated for dataset "${this.datasetName}"`)
         } catch (error) {
           displayError(this, error)
