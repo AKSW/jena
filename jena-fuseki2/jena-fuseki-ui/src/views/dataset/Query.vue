@@ -204,6 +204,64 @@ WHERE {
 }
 LIMIT 25`
 
+async function _fetchQueries() {
+  try {
+    const res = await fetch(this.$fusekiService.getFusekiUrl('/yasgui-config') + '?' +
+      new URLSearchParams({
+        query: `PREFIX conf: <https://yasgui.triply.cc/config#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#first>
+PREFIX sd: <http://www.w3.org/ns/sparql-service-description#>
+PREFIX list: <http://jena.apache.org/ARQ/list#>
+JSON {
+ "": ?text,
+ "": ?value
+} WHERE {
+  ?root sd:endpoint "/${this.datasetName}/" .
+  ?root conf:exampleQueries ?list .
+  ?list list:index (?idx ?ex) .
+  ?ex rdfs:label ?text .
+  ?ex conf:query ?value .
+}
+ORDER BY ?idx`
+      }))
+    const parse = await res.json()
+    if (parse.length !== 0) {
+      this.queries.splice(0, Infinity, ...parse)
+    }
+  } catch {
+  }
+}
+
+async function _fetchPrefixes() {
+  try {
+    const res = await fetch(this.$fusekiService.getFusekiUrl('/yasgui-config') + '?' +
+      new URLSearchParams({
+        query: `PREFIX conf: <https://yasgui.triply.cc/config#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#first>
+PREFIX sd: <http://www.w3.org/ns/sparql-service-description#>
+PREFIX list: <http://jena.apache.org/ARQ/list#>
+JSON {
+ "": ?text,
+ "": ?uri
+} WHERE {
+  ?root sd:endpoint "/${this.datasetName}/" .
+  ?root conf:prefixes ?list .
+  ?list list:index (?idx ?ex) .
+  ?ex rdfs:label ?text .
+  ?ex conf:uri ?uri .
+}
+ORDER BY ?idx`
+      }))
+    const parse = await res.json()
+    if (parse.length !== 0) {
+      this.prefixes.splice(0, Infinity, ...parse)
+    }
+  } catch {
+  }
+}
+
 export default {
   name: 'DatasetQuery',
 
@@ -254,6 +312,13 @@ export default {
       currentDatasetUrl: ''
     }
   },
+  async mounted () {
+    await Promise.all([
+      _fetchQueries.bind(this)(),
+      _fetchPrefixes.bind(this)()
+    ])
+  }
+  ,
 
   computed: {
     datasetUrl () {
