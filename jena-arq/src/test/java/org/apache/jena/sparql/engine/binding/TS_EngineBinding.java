@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,28 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.jena.riot.system;
+package org.apache.jena.sparql.engine.binding;
 
-import org.apache.jena.rdf.model.impl.RDFWriterFImpl ;
-import org.apache.jena.riot.adapters.RDFWriterFactoryRIOT ;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class IO_JenaWriters
-{ 
-    // Do once.
-    private static boolean isWiredIn = false ;
-    
-    public static void wireIntoJena() {
-        if ( isWiredIn )
-            return ;
-        isWiredIn = true ;
-        RDFWriterFImpl.alternative(new RDFWriterFactoryRIOT());
-    }
-    
-    public static void resetJena() {
-        if ( ! isWiredIn )
-            return ;
-        isWiredIn = false ;
-        RDFWriterFImpl.alternative(null);
-    }
-}
+@RunWith(Suite.class)
+@Suite.SuiteClasses( {
+        TestItr.class
+      , TestBinding.class
+      , TestBindingStreams.class
+})
 
+public class TS_EngineBinding { }

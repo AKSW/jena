@@ -128,7 +128,7 @@ public class RDFWriterRegistry
 
         // ==== System defaults for JSON-LD writing.
         // ** Coordinate with RDFFormat definitions of JSONLD RDFFormats:
-        //    JSONLD_PRETTY, JSONLD_PLAIN, JSONLD,JSONLD_FLAT
+        //    JSONLD_PRETTY, JSONLD_PLAIN, JSONLD, JSONLD_FLAT
 
         WriterGraphRIOTFactory jsonldWriterGraphDefault      = wgJsonldFactory11;
         WriterDatasetRIOTFactory jsonldWriterDatasetDefault  = wdsJsonldFactory11;
@@ -301,20 +301,34 @@ public class RDFWriterRegistry
 
     /** All registered graph formats */
     public static Collection<RDFFormat> registeredGraphFormats() {
-        return Collections.unmodifiableSet(registryGraph.keySet()) ;
+        return Set.copyOf(registryGraph.keySet()) ;
     }
 
     /** All registered dataset formats */
     public static Collection<RDFFormat> registeredDatasetFormats() {
-        return Collections.unmodifiableSet(registryDataset.keySet()) ;
+        return Set.copyOf(registryDataset.keySet()) ;
     }
 
     /** All registered formats */
-    public static Collection<RDFFormat> registered() {
+    public static Collection<RDFFormat> registeredFormats() {
         Set<RDFFormat> x = new HashSet<>() ;
         x.addAll(registryGraph.keySet()) ;
         x.addAll(registryDataset.keySet()) ;
-        return Collections.unmodifiableSet(x) ;
+        return Set.copyOf(x) ;
+    }
+
+    /**
+     * All registered formats.
+     * @deprecated Use {@link #registeredFormats()} instead.
+    */
+    @Deprecated
+    public static Collection<RDFFormat> registered() {
+        return registeredFormats();
+    }
+
+    /** All registered languages */
+    public static Collection<Lang> registeredLangs() {
+        return Set.copyOf(langToFormat.keySet());
     }
 
     /** Get the graph writer factory associated with the language */
