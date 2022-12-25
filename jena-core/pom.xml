@@ -25,7 +25,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>4.7.0-SNAPSHOT</version>
+    <version>4.8.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -41,13 +41,13 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.7.0-SNAPSHOT</version>
+      <version>4.8.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.7.0-SNAPSHOT</version>
+      <version>4.8.0-SNAPSHOT</version>
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
@@ -55,7 +55,7 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-iri</artifactId>
-      <version>4.7.0-SNAPSHOT</version>
+      <version>4.8.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -194,7 +194,7 @@
           <groups>
             <group>
               <title>API - Application Programming Interface</title>
-              <packages>org.apache.jena.rdf.model:org.apache.jena.rdf.listeners:org.apache.jena.datatypes:org.apache.jena.datatypes.xsd:org.apache.jena.shared:org.apache.jena.vocabulary:org.apache.jena.rdfxml.xmlinput:org.apache.jena.rdfxml.xmloutput:org.apache.jena.ontology::org.apache.jena.reasoner:org.apache.jena.reasoner.rulesys:org.apache.jena.reasoner.rulesys.builtins:org.apache.jena.reasoner.transitiveReasoner</packages>
+              <packages>org.apache.jena.rdf.model:org.apache.jena.rdf.listeners:org.apache.jena.datatypes:org.apache.jena.datatypes.xsd:org.apache.jena.shared:org.apache.jena.vocabulary:org.apache.jena.rdfxml.xmlinput:org.apache.jena.rdfxml.xmloutput:org.apache.jena.ontology:org.apache.jena.reasoner:org.apache.jena.reasoner.rulesys:org.apache.jena.reasoner.rulesys.builtins:org.apache.jena.reasoner.transitiveReasoner</packages>
             </group>
             <group>
               <title>SPI - System Programming Interface</title>
