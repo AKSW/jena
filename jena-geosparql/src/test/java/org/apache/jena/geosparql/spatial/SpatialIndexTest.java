@@ -32,7 +32,7 @@ public class SpatialIndexTest {
         HashSet<Node> res1 = searchEnvelope1.check(index1);
 
         // save to tmp file
-        File file = File.createTempFile( "jena", "spatial.index");
+        File file = new File("/tmp/test-spatial.index"); //File.createTempFile( "jena", "spatial.index");
         file.deleteOnExit();
         SpatialIndex.save(file, index1);
 

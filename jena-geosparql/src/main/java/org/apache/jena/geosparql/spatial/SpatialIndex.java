@@ -35,6 +35,7 @@ import org.apache.jena.geosparql.implementation.registry.SRSRegistry;
 import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
+import org.apache.jena.geosparql.spatial.serde.JtsKryoRegistrator;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -519,14 +520,14 @@ public class SpatialIndex {
             }
             try {
                 Kryo kryo = new Kryo();
-                kryo.register(STRtree.class);
-                kryo.register(Node.class);
+                JtsKryoRegistrator.registerClasses(kryo);
 
                 IOX.safeWriteOrCopy(file, tmpFile,
                         out->{
-                            Output output = new Output(new FileOutputStream(spatialIndexFile));
+                            Output output = new Output(out);
                             kryo.writeObject(output, index.srsInfo.getSrsURI());
                             kryo.writeObject(output, index.strTree);
+                            output.close();
                         });
             } catch (RuntimeIOException ex) {
                 throw new SpatialIndexException("Save Exception: " + ex.getMessage());
@@ -547,8 +548,7 @@ public class SpatialIndex {
      */
     public static final SpatialIndex load(File spatialIndexFile) throws SpatialIndexException {
         Kryo kryo = new Kryo();
-        kryo.register(STRtree.class);
-        kryo.register(Node.class);
+        JtsKryoRegistrator.registerClasses(kryo);
 
         if (spatialIndexFile != null && spatialIndexFile.exists()) {
             LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
