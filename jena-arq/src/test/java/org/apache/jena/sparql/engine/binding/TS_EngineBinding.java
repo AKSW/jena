@@ -16,13 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.jena.test;
+package org.apache.jena.sparql.engine.binding;
 
-import org.apache.jena.vocabulary.RDFS;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-// Invoked from TestSystemSetup 
-public class RDFSJenaInitTestApp {
-    public static void main(String[] args) {
-        System.out.printf("%s\n", RDFS.subClassOf);
-    }
-}
+@RunWith(Suite.class)
+@Suite.SuiteClasses( {
+        TestItr.class
+      , TestBinding.class
+      , TestBindingStreams.class
+})
+
+public class TS_EngineBinding { }

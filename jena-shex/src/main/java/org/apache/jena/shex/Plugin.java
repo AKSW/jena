@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,28 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.jena.riot.system;
+package org.apache.jena.shex;
 
-import org.apache.jena.rdf.model.impl.RDFWriterFImpl ;
-import org.apache.jena.riot.adapters.RDFWriterFactoryRIOT ;
+public interface Plugin {
 
-public class IO_JenaWriters
-{ 
-    // Do once.
-    private static boolean isWiredIn = false ;
-    
-    public static void wireIntoJena() {
-        if ( isWiredIn )
-            return ;
-        isWiredIn = true ;
-        RDFWriterFImpl.alternative(new RDFWriterFactoryRIOT());
-    }
-    
-    public static void resetJena() {
-        if ( ! isWiredIn )
-            return ;
-        isWiredIn = false ;
-        RDFWriterFImpl.alternative(null);
-    }
+    void register();
+
 }
-
