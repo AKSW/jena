@@ -255,7 +255,7 @@ public abstract class GenericPropertyFunction extends PFuncSimple {
                 }
 
                 //Also test all Geometry of the Features. All, some or one Geometry may have matched.
-                List<Node> featureGeometryTriples = G.listSP(graph, feature.asNode(), Geo.HAS_GEOMETRY_NODE);
+                List<Node> featureGeometryTriples = G.listSP(graph, featureNode, Geo.HAS_GEOMETRY_NODE);
                 for ( Node geomNode : featureGeometryTriples) {
                     //Ensure not already an asserted node.
                     if (!assertedNodes.contains(geomNode)) {
