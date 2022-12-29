@@ -20,14 +20,26 @@ package org.apache.jena.fuseki.geosparql;
 import com.beust.jcommander.JCommander;
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.UUID;
+
+import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.fuseki.geosparql.cli.ArgsConfig;
+import org.apache.jena.fuseki.main.FusekiServer;
+import org.apache.jena.fuseki.main.sys.FusekiModule;
+import org.apache.jena.fuseki.main.sys.FusekiModules;
+import org.apache.jena.fuseki.server.Operation;
 import org.apache.jena.fuseki.system.FusekiLogging;
 import org.apache.jena.geosparql.configuration.SrsException;
 import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.rdf.model.Model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 
 public class Main {
 
@@ -64,7 +76,7 @@ public class Main {
         //Setup dataset
         try {
             Dataset dataset = DatasetOperations.setup(argsConfig);
-
+            FusekiModules.add(new FMod_SpatialIndexer());
             //Configure server
             GeosparqlServer server = new GeosparqlServer(argsConfig.getPort(), argsConfig.getDatsetName(), argsConfig.isLoopbackOnly(), dataset, argsConfig.isUpdateAllowed());
             server.start();
@@ -72,6 +84,32 @@ public class Main {
             LOGGER.error("GeoSPARQL Server:  Exiting - {}: {}", ex.getMessage(), argsConfig.getDatsetName());
         }
 
+    }
+
+    static class FMod_SpatialIndexer implements FusekiModule {
+
+        private Operation spatialOperation = null;
+
+        @Override
+        public String name() {
+            return "Spatial Indexer";
+        }
+
+        @Override
+        public void start() {
+            Fuseki.configLog.info("Add spatial indexer operation into global registry.");
+            spatialOperation = Operation.alloc("http://org.apache.jena/spatial-index-service", "spatial-indexer", "Spatial index computation service");
+        }
+
+        @Override public void prepare(FusekiServer.Builder builder, Set<String> datasetNames, Model configModel) {
+            System.out.println("Module adds servlet");
+            builder.registerOperation(spatialOperation, new SpatialIndexComputeService());
+            datasetNames.forEach(name->builder.addEndpoint(name, "spatial", spatialOperation));
+        }
+
+        @Override public void serverAfterStarting(FusekiServer server) {
+            System.out.println("Customized server start on port "+server.getHttpPort());
+        }
     }
 
 }

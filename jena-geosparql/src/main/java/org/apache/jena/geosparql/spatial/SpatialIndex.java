@@ -39,6 +39,7 @@ import org.apache.jena.rdf.model.*;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
+import org.apache.jena.system.Txn;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.index.strtree.STRtree;
@@ -233,11 +234,15 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, File spatialIndexFile) throws SpatialIndexException {
+        return buildSpatialIndex(dataset, srsURI, spatialIndexFile, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, File spatialIndexFile, boolean inExternalTransaction) throws SpatialIndexException {
 
         SpatialIndex spatialIndex = load(spatialIndexFile);
 
         if (spatialIndex.isEmpty()) {
-            Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI);
+            Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI, inExternalTransaction);
             save(spatialIndexFile, spatialIndexItems, srsURI);
             spatialIndex = new SpatialIndex(spatialIndexItems, srsURI);
             spatialIndex.build();
@@ -259,8 +264,12 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, File spatialIndexFile) throws SpatialIndexException {
-        String srsURI = GeoSPARQLOperations.findModeSRS(dataset);
-        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI, spatialIndexFile);
+        return buildSpatialIndex(dataset, spatialIndexFile, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, File spatialIndexFile, boolean inExternalTransaction) throws SpatialIndexException {
+        String srsURI = GeoSPARQLOperations.findModeSRS(dataset, inExternalTransaction);
+        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI, spatialIndexFile, inExternalTransaction);
         return spatialIndex;
     }
 
@@ -274,9 +283,13 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI) throws SpatialIndexException {
+        return buildSpatialIndex(dataset, srsURI, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, boolean inExternalTransaction) throws SpatialIndexException {
         LOGGER.info("Building Spatial Index - Started");
 
-        Collection<SpatialIndexItem> items = findSpatialIndexItems(dataset, srsURI);
+        Collection<SpatialIndexItem> items = findSpatialIndexItems(dataset, srsURI, inExternalTransaction);
         SpatialIndex spatialIndex = new SpatialIndex(items, srsURI);
         spatialIndex.build();
         setSpatialIndex(dataset, spatialIndex);
@@ -293,8 +306,14 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static Collection<SpatialIndexItem> findSpatialIndexItems(Dataset dataset, String srsURI) throws SpatialIndexException {
+       return findSpatialIndexItems(dataset, srsURI, false);
+    }
+
+    public static Collection<SpatialIndexItem> findSpatialIndexItems(Dataset dataset, String srsURI, boolean inExternalTransaction) throws SpatialIndexException {
         //Default Model
-        dataset.begin(ReadWrite.READ);
+        if (!inExternalTransaction) {
+            dataset.begin(ReadWrite.READ);
+        }
         Model defaultModel = dataset.getDefaultModel();
         Collection<SpatialIndexItem> items = getSpatialIndexItems(defaultModel, srsURI);
 
@@ -307,7 +326,9 @@ public class SpatialIndex {
             items.addAll(graphItems);
         }
 
-        dataset.end();
+        if (!inExternalTransaction) {
+            dataset.end();
+        }
 
         return items;
     }
@@ -322,8 +343,12 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset) throws SpatialIndexException {
-        String srsURI = GeoSPARQLOperations.findModeSRS(dataset);
-        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI);
+        return buildSpatialIndex(dataset, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, boolean inExternalTransaction) throws SpatialIndexException {
+        String srsURI = GeoSPARQLOperations.findModeSRS(dataset, inExternalTransaction);
+        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI, inExternalTransaction);
         return spatialIndex;
     }
 

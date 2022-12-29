@@ -501,10 +501,16 @@ public class GeoSPARQLOperations {
      * @return SRS URI
      */
     public static final String findModeSRS(Dataset dataset) throws SrsException {
+        return findModeSRS(dataset, false);
+    }
+
+    public static final String findModeSRS(Dataset dataset, boolean inExternalTransaction) throws SrsException {
         LOGGER.info("Find Mode SRS - Started");
         ModeSRS modeSRS = new ModeSRS();
         //Default Model
-        dataset.begin(ReadWrite.READ);
+        if (!inExternalTransaction) {
+            dataset.begin(ReadWrite.READ);
+        }
         Model defaultModel = dataset.getDefaultModel();
         modeSRS.search(defaultModel);
 
@@ -517,7 +523,9 @@ public class GeoSPARQLOperations {
         }
 
         LOGGER.info("Find Mode SRS - Completed");
-        dataset.end();
+        if (!inExternalTransaction) {
+            dataset.end();
+        }
 
         return modeSRS.getModeURI();
     }
