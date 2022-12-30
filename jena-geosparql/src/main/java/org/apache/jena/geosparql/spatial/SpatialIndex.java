@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -37,10 +38,12 @@ import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
 import org.apache.jena.geosparql.spatial.serde.JtsKryoRegistrator;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.compose.Union;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
@@ -67,16 +70,20 @@ public class SpatialIndex {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     public static final Symbol SPATIAL_INDEX_SYMBOL = Symbol.create("http://jena.apache.org/spatial#index");
+    public static final Symbol symSpatialIndexPerGraph = Symbol.create("http://jena.apache.org/spatial#indexPerGraph");
 
     private transient final SRSInfo srsInfo;
     private boolean isBuilt;
-    private final STRtree strTree;
+    private final STRtree defaultGraphTree;
+    private Map<String, STRtree> graphToTree = new HashMap<>();
     private static final int MINIMUM_CAPACITY = 2;
 
+    private File location;
+
     private SpatialIndex() {
-        this.strTree = new STRtree(MINIMUM_CAPACITY);
+        this.defaultGraphTree = new STRtree(MINIMUM_CAPACITY);
         this.isBuilt = true;
-        this.strTree.build();
+        this.defaultGraphTree.build();
         this.srsInfo = SRSRegistry.getSRSInfo(SRS_URI.DEFAULT_WKT_CRS84);
     }
 
@@ -87,8 +94,8 @@ public class SpatialIndex {
      * @param srsURI
      */
     public SpatialIndex(int capacity, String srsURI) {
-        int indexCapacity = capacity < MINIMUM_CAPACITY ? MINIMUM_CAPACITY : capacity;
-        this.strTree = new STRtree(indexCapacity);
+        int indexCapacity = Math.max(capacity, MINIMUM_CAPACITY);
+        this.defaultGraphTree = new STRtree(indexCapacity);
         this.isBuilt = false;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
@@ -101,10 +108,10 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public SpatialIndex(Collection<SpatialIndexItem> spatialIndexItems, String srsURI) throws SpatialIndexException {
-        int indexCapacity = spatialIndexItems.size() < MINIMUM_CAPACITY ? MINIMUM_CAPACITY : spatialIndexItems.size();
-        this.strTree = new STRtree(indexCapacity);
+        int indexCapacity = Math.max(spatialIndexItems.size(), MINIMUM_CAPACITY);
+        this.defaultGraphTree = new STRtree(indexCapacity);
         insertItems(spatialIndexItems);
-        this.strTree.build();
+        this.defaultGraphTree.build();
         this.isBuilt = true;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
@@ -117,7 +124,14 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public SpatialIndex(STRtree tree, String srsURI) throws SpatialIndexException {
-        this.strTree = tree;
+        this.defaultGraphTree = tree;
+        this.isBuilt = true;
+        this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
+    }
+
+    public SpatialIndex(STRtree defaultGraphTree, Map<String, STRtree> graphToTree, String srsURI) throws SpatialIndexException {
+        this.defaultGraphTree = defaultGraphTree;
+        this.graphToTree = graphToTree;
         this.isBuilt = true;
         this.srsInfo = SRSRegistry.getSRSInfo(srsURI);
     }
@@ -135,7 +149,7 @@ public class SpatialIndex {
      * @return True if the SpatialIndex is empty.
      */
     public boolean isEmpty() {
-        return strTree.isEmpty();
+        return defaultGraphTree.isEmpty();
     }
 
     /**
@@ -151,7 +165,8 @@ public class SpatialIndex {
      */
     public void build() {
         if (!isBuilt) {
-            strTree.build();
+            graphToTree.values().forEach(STRtree::build);
+            defaultGraphTree.build();
             isBuilt = true;
         }
     }
@@ -160,7 +175,7 @@ public class SpatialIndex {
      * Returns the number of items in the index.
      */
     public int getSize() {
-        return strTree.size();
+        return defaultGraphTree.size();
     }
 
     /**
@@ -185,7 +200,7 @@ public class SpatialIndex {
      */
     public final void insertItem(Envelope envelope, Resource item) throws SpatialIndexException {
         if (!isBuilt) {
-            strTree.insert(envelope, item.asNode());
+            defaultGraphTree.insert(envelope, item.asNode());
         } else {
             throw new SpatialIndexException("SpatialIndex has been built and cannot have additional items.");
         }
@@ -193,16 +208,65 @@ public class SpatialIndex {
 
     @SuppressWarnings("unchecked")
     public HashSet<Node> query(Envelope searchEnvelope) {
-        if (!strTree.isEmpty()) {
-            return new HashSet<>(strTree.query(searchEnvelope));
+        if (!defaultGraphTree.isEmpty()) {
+            return new HashSet<>(defaultGraphTree.query(searchEnvelope));
         } else {
             return new HashSet<>();
         }
     }
 
+    public HashSet<Node> query(Envelope searchEnvelope, String graph) {
+        LOGGER.debug("spatial index lookup on graph: " + graph);
+
+        // handle union graph
+        if (graph.equals(Quad.unionGraph.getURI())) {
+            LOGGER.warn("spatial index lookup on union graph");
+            HashSet<Node> items = graphToTree.values().stream()
+                    .map(tree -> tree.query(searchEnvelope))
+                    .collect(HashSet::new,
+                            Set::addAll,
+                            Set::addAll);
+            return items;
+        } else {
+            if (!graphToTree.containsKey(graph)) {
+                LOGGER.warn("graph not indexed: " + graph);
+            }
+            STRtree tree = graphToTree.get(graph);
+            if (tree != null && !tree.isEmpty()) {
+                return new HashSet<>(tree.query(searchEnvelope));
+            } else {
+                return new HashSet<>();
+            }
+        }
+    }
+
+    public File getLocation() {
+        return location;
+    }
+
+    public void setLocation(File location) {
+        this.location = location;
+    }
+
+    public STRtree getDefaultGraphIndexTree() {
+        return defaultGraphTree;
+    }
+
+    public Map<String, STRtree> getNamedGraphToIndexTreeMapping() {
+        return graphToTree;
+    }
+
+    public boolean hasNamedGraphIndexed(String graph) {
+        return graphToTree.containsKey(graph);
+    }
+
+    public boolean removeGraphFromIndex(String graph) {
+        return graphToTree.remove(graph) != null;
+    }
+
     @Override
     public String toString() {
-        return "SpatialIndex{" + "srsInfo=" + srsInfo + ", isBuilt=" + isBuilt + ", strTree=" + strTree + '}';
+        return "SpatialIndex{" + "srsInfo=" + srsInfo + ", isBuilt=" + isBuilt + ", strTree=" + defaultGraphTree + '}';
     }
 
     /**
@@ -246,6 +310,13 @@ public class SpatialIndex {
         context.set(SPATIAL_INDEX_SYMBOL, spatialIndex);
     }
 
+    public static STRtree buildSpatialIndexTree(Model m, String srsURI) throws SpatialIndexException {
+        Collection<SpatialIndexItem> items = getSpatialIndexItems(m, srsURI);
+        STRtree tree = new STRtree(Math.max(MINIMUM_CAPACITY, items.size()));
+        items.forEach(item -> tree.insert(item.getEnvelope(), item.getItem().asNode()));
+        return tree;
+    }
+
     /**
      * Build Spatial Index from all graphs in Dataset.<br>
      * Dataset contains SpatialIndex in Context.<br>
@@ -259,15 +330,23 @@ public class SpatialIndex {
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, File spatialIndexFile) throws SpatialIndexException {
 
+        return buildSpatialIndex(dataset, srsURI, spatialIndexFile, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset,
+                                                 String srsURI,
+                                                 File spatialIndexFile,
+                                                 boolean spatialIndexPerGraph) throws SpatialIndexException {
+
         SpatialIndex spatialIndex = load(spatialIndexFile);
 
         if (spatialIndex.isEmpty()) {
-            Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI);
-//            save(spatialIndexFile, spatialIndexItems, srsURI);
-            spatialIndex = new SpatialIndex(spatialIndexItems, srsURI);
+            spatialIndex = buildSpatialIndex(dataset, srsURI, spatialIndexPerGraph);
             spatialIndex.build();
+
             save(spatialIndexFile, spatialIndex);
         }
+        spatialIndex.setLocation(spatialIndexFile);
 
         setSpatialIndex(dataset, spatialIndex);
         return spatialIndex;
@@ -285,8 +364,12 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, File spatialIndexFile) throws SpatialIndexException {
+        return buildSpatialIndex(dataset, spatialIndexFile, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, File spatialIndexFile, boolean spatialIndexPerGraph) throws SpatialIndexException {
         String srsURI = GeoSPARQLOperations.findModeSRS(dataset);
-        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI, spatialIndexFile);
+        SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI, spatialIndexFile, spatialIndexPerGraph);
         return spatialIndex;
     }
 
@@ -300,14 +383,45 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI) throws SpatialIndexException {
+        return buildSpatialIndex(dataset, srsURI, false);
+    }
+
+    public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, boolean indexTreePerGraph) throws SpatialIndexException {
         LOGGER.info("Building Spatial Index - Started");
 
-        Collection<SpatialIndexItem> items = findSpatialIndexItems(dataset, srsURI);
-        SpatialIndex spatialIndex = new SpatialIndex(items, srsURI);
-        spatialIndex.build();
-        setSpatialIndex(dataset, spatialIndex);
+        STRtree defaultIndexTree;
+        Map<String, STRtree> graphToTree = new HashMap<>();
+
+        // we always compute an index tree DGT for the default graph
+        // if an index per named graph NG is enabled, we compute a separate index tree NGT for each NG, otherwise all
+        // items will be indexed in the default graph index tree DGT
+        dataset.begin(ReadWrite.READ);
+        Model defaultModel = dataset.getDefaultModel();
+        if (indexTreePerGraph) {
+            LOGGER.info("building spatial index for default graph ...");
+            defaultIndexTree = buildSpatialIndexTree(defaultModel, srsURI);
+
+            // Named Models
+            Iterator<String> graphNames = dataset.listNames();
+            while (graphNames.hasNext()) {
+                String graphName = graphNames.next();
+                LOGGER.info("building spatial index for graph {} ...", graphName);
+                Model namedModel = dataset.getNamedModel(graphName);
+                graphToTree.put(graphName, buildSpatialIndexTree(namedModel, srsURI));
+            }
+        } else {
+            // create the union view of default graph and all named graphs
+            Union unionAllGraph = new Union(dataset.asDatasetGraph().getDefaultGraph(), dataset.asDatasetGraph().getUnionGraph());
+
+            defaultIndexTree = buildSpatialIndexTree(ModelFactory.createModelForGraph(unionAllGraph), srsURI);
+        }
+
+        dataset.end();
         LOGGER.info("Building Spatial Index - Completed");
-        return spatialIndex;
+        SpatialIndex index = new SpatialIndex(defaultIndexTree, graphToTree, srsURI);
+        index.build();
+        setSpatialIndex(dataset, index);
+        return index;
     }
 
     /**
@@ -338,6 +452,7 @@ public class SpatialIndex {
         return items;
     }
 
+
     /**
      * Build Spatial Index from all graphs in Dataset.<br>
      * Dataset contains SpatialIndex in Context.<br>
@@ -351,6 +466,38 @@ public class SpatialIndex {
         String srsURI = GeoSPARQLOperations.findModeSRS(dataset);
         SpatialIndex spatialIndex = buildSpatialIndex(dataset, srsURI);
         return spatialIndex;
+    }
+
+    /**
+     * Recompute and replace the spatial index trees for the given named graphs.
+     *
+     * @param index   the spatial index to modify
+     * @param dataset the dataset containing the named graphs
+     * @param graphs  the named graphs
+     * @return the modified spatial index object, i.e. no copy of the input index object
+     * @throws SpatialIndexException
+     */
+    public static SpatialIndex recomputeIndexForGraphs(SpatialIndex index,
+                                                       Dataset dataset,
+                                                       List<String> graphs) throws SpatialIndexException {
+        dataset.begin(ReadWrite.READ);
+        for (String g : graphs) {
+            if (index.graphToTree.containsKey(g)) {
+                LOGGER.info("recomputing spatial index for graph: {}", g);
+            } else {
+                LOGGER.info("computing spatial index for graph: {}", g);
+            }
+            Model namedModel = dataset.getNamedModel(g);
+            STRtree indexTree = buildSpatialIndexTree(namedModel, index.getSrsInfo().getSrsURI());
+            STRtree oldIndexTree = index.graphToTree.put(g, indexTree);
+            if (oldIndexTree != null) {
+                LOGGER.info("replaced spatial index for graph: {}", g);
+            } else {
+                LOGGER.info("added spatial index for graph: {}", g);
+            }
+        }
+        dataset.end();
+        return index;
     }
 
     /**
@@ -400,7 +547,7 @@ public class SpatialIndex {
 
         //Only add one set of statements as a converted dataset will duplicate the same info.
         if (model.contains(null, Geo.HAS_GEOMETRY_PROP, (Resource) null)) {
-            LOGGER.info("Feature-hasGeometry-Geometry statements found.");
+                LOGGER.info("Feature-hasGeometry-Geometry statements found.");
             if (model.contains(null, SpatialExtension.GEO_LAT_PROP, (Literal) null)) {
                 LOGGER.warn("Lat/Lon Geo predicates also found but will not be added to index.");
             }
@@ -526,7 +673,8 @@ public class SpatialIndex {
                         out->{
                             Output output = new Output(out);
                             kryo.writeObject(output, index.srsInfo.getSrsURI());
-                            kryo.writeObject(output, index.strTree);
+                            kryo.writeObject(output, index.defaultGraphTree);
+                            kryo.writeClassAndObject(output, index.graphToTree);
                             output.close();
                         });
             } catch (RuntimeIOException ex) {
@@ -555,9 +703,11 @@ public class SpatialIndex {
 
             try (Input input = new Input(new FileInputStream(spatialIndexFile))) {
                 String srsUri = kryo.readObject(input, String.class);
-                STRtree tree = kryo.readObject(input, STRtree.class);
+                STRtree defaultGraphTree = kryo.readObject(input, STRtree.class);
+                Map<String, STRtree> graphToTree = (Map<String, STRtree>) kryo.readClassAndObject(input);
 
-                SpatialIndex spatialIndex = new SpatialIndex(tree, srsUri);
+                SpatialIndex spatialIndex = new SpatialIndex(defaultGraphTree, graphToTree, srsUri);
+                spatialIndex.setLocation(spatialIndexFile);
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
                 return spatialIndex;
             } catch (IOException ex) {
