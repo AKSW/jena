@@ -25,6 +25,7 @@ import org.apache.jena.geosparql.implementation.SRSInfo;
 import org.apache.jena.geosparql.implementation.UnitsOfMeasure;
 import org.apache.jena.geosparql.implementation.great_circle.GreatCirclePointDistance;
 import org.apache.jena.geosparql.implementation.great_circle.LatLonPoint;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.sparql.expr.ExprEvalException;
 import org.locationtech.jts.geom.Envelope;
@@ -112,6 +113,16 @@ public class SearchEnvelope {
 
         if (wrapEnvelope != null) {
             HashSet<Node> wrapFeatures = spatialIndex.query(wrapEnvelope);
+            features.addAll(wrapFeatures);
+        }
+        return features;
+    }
+
+    public HashSet<Node> check(SpatialIndex spatialIndex, String graph) {
+        HashSet<Node> features = spatialIndex.query(mainEnvelope, graph);
+
+        if (wrapEnvelope != null) {
+            HashSet<Node> wrapFeatures = spatialIndex.query(wrapEnvelope, graph);
             features.addAll(wrapFeatures);
         }
         return features;
