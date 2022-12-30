@@ -37,6 +37,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.riot.other.G;
+import org.apache.jena.sparql.core.NamedGraph;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.engine.QueryIterator;
@@ -183,7 +184,11 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
 
         //Find all Features in the spatial index which are within the rough search envelope.
         SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
-        HashSet<Node> features = searchEnvelope.check(spatialIndex);
+        Graph activeGraph = execCxt.getActiveGraph();
+
+        HashSet<Node> features = (activeGraph instanceof NamedGraph && ((NamedGraph) activeGraph).getGraphName() != null)
+                ? searchEnvelope.check(spatialIndex, ((NamedGraph) activeGraph).getGraphName().getURI())
+                : searchEnvelope.check(spatialIndex);
 
         Var subjectVar = Var.alloc(subject.getName());
 
