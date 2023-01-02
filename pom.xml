@@ -58,7 +58,7 @@
 
     <!-- Testing -->
     <ver.junit>4.13.2</ver.junit>  
-    <ver.mockito>4.9.0</ver.mockito>
+    <ver.mockito>4.11.0</ver.mockito>
     <ver.awaitility>4.2.0</ver.awaitility>
     <ver.contract.tests>0.2.0</ver.contract.tests>
 
@@ -68,10 +68,10 @@
 
     <ver.lucene>9.4.2</ver.lucene>
 
-    <ver.jetty>10.0.12</ver.jetty>
+    <ver.jetty>10.0.13</ver.jetty>
     <ver.shiro>1.10.1</ver.shiro>
 
-    <ver.protobuf>3.21.10</ver.protobuf>
+    <ver.protobuf>3.21.12</ver.protobuf>
     <ver.libthrift>0.17.0</ver.libthrift>
 
     <!-- JSON-LD 1.1 -->
@@ -89,7 +89,7 @@
     -->
     <ver.jsonldjava>0.13.4</ver.jsonldjava>
     <ver.jackson>2.14.1</ver.jackson>
-    <ver.httpclient>4.5.13</ver.httpclient>
+    <ver.httpclient>4.5.14</ver.httpclient>
     <ver.httpcore>4.4.16</ver.httpcore>
 
     <ver.shaded-guava>31.1-jre</ver.shaded-guava>
