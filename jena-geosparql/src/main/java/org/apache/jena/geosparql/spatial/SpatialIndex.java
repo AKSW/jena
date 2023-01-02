@@ -407,7 +407,10 @@ public class SpatialIndex {
 
         dataset.end();
         LOGGER.info("Building Spatial Index - Completed");
-        return new SpatialIndex(defaultIndexTree, graphToTree, srsURI);
+        SpatialIndex index = new SpatialIndex(defaultIndexTree, graphToTree, srsURI);
+        index.build();
+        setSpatialIndex(dataset, index);
+        return index;
     }
 
     /**
