@@ -45,7 +45,7 @@ public class JtsKryoRegistrator {
         GeometrySerde serializer = new CustomGeometrySerde();
         SpatialIndexSerde indexSerializer = new CustomSpatialIndexSerde(serializer);
 
-        log.info("Registering custom serializers for geometry types");
+        log.debug("Registering custom serializers for geometry types");
 
         kryo.register(Point.class, serializer);
         kryo.register(LineString.class, serializer);

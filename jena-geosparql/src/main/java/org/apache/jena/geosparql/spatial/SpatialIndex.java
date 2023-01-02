@@ -242,6 +242,18 @@ public class SpatialIndex {
         }
     }
 
+    public STRtree getDefaultGraphIndexTree() {
+        return defaultGraphTree;
+    }
+
+    public Map<String, STRtree> getNamedGraphToIndexTreeMapping() {
+        return graphToTree;
+    }
+
+    public boolean hasNamedGraphIndexed(String graph) {
+        return graphToTree.containsKey(graph);
+    }
+
     @Override
     public String toString() {
         return "SpatialIndex{" + "srsInfo=" + srsInfo + ", isBuilt=" + isBuilt + ", strTree=" + defaultGraphTree + '}';
@@ -290,7 +302,7 @@ public class SpatialIndex {
 
     public static STRtree buildSpatialIndexTree(Model m, String srsURI) throws SpatialIndexException {
         Collection<SpatialIndexItem> items = getSpatialIndexItems(m, srsURI);
-        STRtree tree = new STRtree(items.size());
+        STRtree tree = new STRtree(Math.max(MINIMUM_CAPACITY, items.size()));
         items.forEach(item -> tree.insert(item.getEnvelope(), item.getItem().asNode()));
         return tree;
     }
@@ -308,16 +320,7 @@ public class SpatialIndex {
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, File spatialIndexFile) throws SpatialIndexException {
 
-        SpatialIndex spatialIndex = load(spatialIndexFile);
-
-        if (spatialIndex.isEmpty()) {
-            spatialIndex = buildSpatialIndex(dataset, srsURI);
-            spatialIndex.build();
-            save(spatialIndexFile, spatialIndex);
-        }
-
-        setSpatialIndex(dataset, spatialIndex);
-        return spatialIndex;
+        return buildSpatialIndex(dataset, srsURI, spatialIndexFile, false);
     }
 
     public static SpatialIndex buildSpatialIndex(Dataset dataset,
@@ -369,14 +372,7 @@ public class SpatialIndex {
      * @throws SpatialIndexException
      */
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI) throws SpatialIndexException {
-        LOGGER.info("Building Spatial Index - Started");
-
-        Collection<SpatialIndexItem> items = findSpatialIndexItems(dataset, srsURI);
-        SpatialIndex spatialIndex = new SpatialIndex(items, srsURI);
-        spatialIndex.build();
-        setSpatialIndex(dataset, spatialIndex);
-        LOGGER.info("Building Spatial Index - Completed");
-        return spatialIndex;
+        return buildSpatialIndex(dataset, srsURI, false);
     }
 
     public static SpatialIndex buildSpatialIndex(Dataset dataset, String srsURI, boolean indexTreePerGraph) throws SpatialIndexException {
@@ -391,12 +387,14 @@ public class SpatialIndex {
         dataset.begin(ReadWrite.READ);
         Model defaultModel = dataset.getDefaultModel();
         if (indexTreePerGraph) {
+            LOGGER.info("building spatial index for default graph ...");
             defaultIndexTree = buildSpatialIndexTree(defaultModel, srsURI);
 
             // Named Models
             Iterator<String> graphNames = dataset.listNames();
             while (graphNames.hasNext()) {
                 String graphName = graphNames.next();
+                LOGGER.info("building spatial index for graph {} ...", graphName);
                 Model namedModel = dataset.getNamedModel(graphName);
                 graphToTree.put(graphName, buildSpatialIndexTree(namedModel, srsURI));
             }
@@ -630,7 +628,7 @@ public class SpatialIndex {
                             Output output = new Output(out);
                             kryo.writeObject(output, index.srsInfo.getSrsURI());
                             kryo.writeObject(output, index.defaultGraphTree);
-                            kryo.writeObject(output, index.graphToTree);
+                            kryo.writeClassAndObject(output, index.graphToTree);
                             output.close();
                         });
             } catch (RuntimeIOException ex) {
@@ -660,7 +658,7 @@ public class SpatialIndex {
             try (Input input = new Input(new FileInputStream(spatialIndexFile))) {
                 String srsUri = kryo.readObject(input, String.class);
                 STRtree defaultGraphTree = kryo.readObject(input, STRtree.class);
-                Map<String, STRtree> graphToTree =  kryo.readObject(input, Map.class);
+                Map<String, STRtree> graphToTree = (Map<String, STRtree>) kryo.readClassAndObject(input);
 
                 SpatialIndex spatialIndex = new SpatialIndex(defaultGraphTree, graphToTree, srsUri);
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
