@@ -455,6 +455,29 @@ public class SpatialIndex {
     }
 
     /**
+     * Recompute and replace the spatial index trees for the given named graphs.
+     *
+     * @param index   the spatial index to modify
+     * @param dataset the dataset containing the named graphs
+     * @param graphs  the named graphs
+     * @return the modified spatial index object, i.e. no copy of the input index object
+     * @throws SpatialIndexException
+     */
+    public static SpatialIndex recomputeIndexForGraphs(SpatialIndex index,
+                                                       Dataset dataset,
+                                                       List<String> graphs) throws SpatialIndexException {
+        dataset.begin(ReadWrite.READ);
+        for (String g : graphs) {
+            LOGGER.info("recomputing spatial index for graph: {}", g);
+            Model namedModel = dataset.getNamedModel(g);
+            STRtree indexTree = buildSpatialIndexTree(namedModel, index.getSrsInfo().getSrsURI());
+            index.graphToTree.put(g, indexTree);
+        }
+        dataset.end();
+        return index;
+    }
+
+    /**
      * Wrap Model in a Dataset and build SpatialIndex.
      *
      * @param model
