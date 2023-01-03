@@ -103,7 +103,7 @@ public class Main {
 
         @Override public void prepare(FusekiServer.Builder builder, Set<String> datasetNames, Model configModel) {
             System.out.println("Module adds servlet");
-            builder.registerOperation(spatialOperation, new SpatialIndexComputeService());
+            builder.registerOperation(spatialOperation, new SpatialIndexComputeServiceSimple());
             datasetNames.forEach(name->builder.addEndpoint(name, "spatial", spatialOperation));
         }
 
