@@ -118,7 +118,7 @@ public class GeoAssembler extends DatasetAssembler {
             spatialIndexFilename = GraphUtils.getStringValue(root, pSpatialIndexFile);
 
         boolean spatialIndexPerGraph = false;
-        if (root.hasProperty(pSpatialIndexFile) )
+        if (root.hasProperty(pSpatialIndexPerGraph) )
             spatialIndexPerGraph = getBooleanValue(root, pSpatialIndexPerGraph);
 
 
