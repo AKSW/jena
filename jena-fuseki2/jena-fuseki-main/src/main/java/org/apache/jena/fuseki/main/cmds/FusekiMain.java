@@ -113,6 +113,7 @@ public class FusekiMain extends CmdARQ {
     private static ArgDecl  argValidators   = new ArgDecl(ArgDecl.NoValue,  "validators");
 
     private static List<ArgModuleGeneral> additionalArgs = new ArrayList<>();
+
     public static void addArgModule(ArgModuleGeneral argModule) { additionalArgs.add(argModule); }
 
     // private static ModLocation modLocation = new ModLocation();
@@ -121,6 +122,61 @@ public class FusekiMain extends CmdARQ {
     private final ServerConfig serverConfig  = new ServerConfig();
     // Default
     private boolean useTDB2 = true;
+
+    public static void init() {
+        argMem          = new ArgDecl(ArgDecl.NoValue,  "mem");
+        argUpdate       = new ArgDecl(ArgDecl.NoValue,  "update", "allowUpdate");
+        argFile         = new ArgDecl(ArgDecl.HasValue, "file");
+
+        argTDB1mode     = new ArgDecl(ArgDecl.NoValue,  "tdb1");
+        argTDB2mode     = new ArgDecl(ArgDecl.NoValue,  "tdb2");
+        argMemTDB       = new ArgDecl(ArgDecl.NoValue,  "memtdb", "memTDB", "tdbmem");
+        argTDB          = new ArgDecl(ArgDecl.HasValue, "loc", "location", "tdb");
+
+        // RDFS vocabulary applied to command line defined dataset.
+        argRDFS         = new ArgDecl(ArgDecl.HasValue, "rdfs");
+
+        // No SPARQL dataset or services
+        argEmpty        = new ArgDecl(ArgDecl.NoValue,  "empty", "no-dataset");
+        argGeneralQuerySvc = new ArgDecl(ArgDecl.HasValue, "general");
+
+        argPort         = new ArgDecl(ArgDecl.HasValue, "port");
+        argLocalhost    = new ArgDecl(ArgDecl.NoValue,  "localhost", "local");
+        argTimeout      = new ArgDecl(ArgDecl.HasValue, "timeout");
+        argConfig       = new ArgDecl(ArgDecl.HasValue, "config", "conf");
+
+        argJettyConfig  = new ArgDecl(ArgDecl.HasValue, "jetty-config", "jetty");
+        argGZip         = new ArgDecl(ArgDecl.HasValue, "gzip");
+        argBase         = new ArgDecl(ArgDecl.HasValue, "base", "files");
+
+        // This is now a no-op - CORS is included unless "--no-cors" is used.
+        argCORS         = new ArgDecl(ArgDecl.NoValue,  "withCORS", "cors", "CORS");
+        argNoCORS       = new ArgDecl(ArgDecl.NoValue,  "noCORS", "no-cors");
+        argWithPing     = new ArgDecl(ArgDecl.NoValue,  "withPing", "ping");
+        argWithStats    = new ArgDecl(ArgDecl.NoValue,  "withStats", "stats");
+        argWithMetrics  = new ArgDecl(ArgDecl.NoValue,  "withMetrics", "metrics");
+        argWithCompact  = new ArgDecl(ArgDecl.NoValue,  "withCompact", "compact");
+
+        argAuth         = new ArgDecl(ArgDecl.HasValue, "auth");
+
+        argHttps        = new ArgDecl(ArgDecl.HasValue, "https");
+        argHttpsPort    = new ArgDecl(ArgDecl.HasValue, "httpsPort", "httpsport", "sport");
+
+        argPasswdFile   = new ArgDecl(ArgDecl.HasValue, "passwd");
+        argRealm        = new ArgDecl(ArgDecl.HasValue, "realm");
+
+        // Same as --empty --validators --general=/sparql, --files=ARG
+
+        argSparqler     = new ArgDecl(ArgDecl.HasValue, "sparqler");
+
+        argValidators   = new ArgDecl(ArgDecl.NoValue,  "validators");
+
+        additionalArgs = new ArrayList<>();
+    }
+
+    static {
+        init();
+    }
 
     /** Build, but do not start, a server based on command line syntax. */
     public static FusekiServer build(String... argv) {

@@ -19,6 +19,7 @@
 package org.apache.jena.fuseki.main.sys;
 
 import org.apache.jena.cmd.Cmds;
+import org.apache.jena.fuseki.main.cmds.FusekiMain;
 import org.apache.jena.fuseki.main.cmds.FusekiMainCmd;
 import org.apache.jena.sys.JenaSubsystemLifecycle;
 import org.apache.jena.sys.JenaSystem;
@@ -56,6 +57,7 @@ public class InitFuseki implements JenaSubsystemLifecycle {
             }
             initialized = true;
             JenaSystem.logLifecycle("Fuseki.init - start");
+            FusekiMain.init();
             FusekiModulesLoaded.init();
             try {
                 Cmds.injectCmd("fuseki", a->FusekiMainCmd.main(a));
