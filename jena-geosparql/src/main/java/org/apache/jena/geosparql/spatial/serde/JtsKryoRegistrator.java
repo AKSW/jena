@@ -74,7 +74,7 @@ public class JtsKryoRegistrator {
         }
 
         @Override
-        public Node read(Kryo kryo, Input input, Class<? extends Node> aClass) {
+        public Node read(Kryo kryo, Input input, Class<Node> aClass) {
             return NodeFactory.createURI(input.readString());
         }
     }
