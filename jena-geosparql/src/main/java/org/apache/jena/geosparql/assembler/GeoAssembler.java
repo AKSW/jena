@@ -33,6 +33,7 @@ import org.apache.jena.atlas.io.IO;
 import org.apache.jena.geosparql.configuration.GeoSPARQLConfig;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.configuration.SrsException;
+import org.apache.jena.geosparql.spatial.SpatialIndex;
 import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
@@ -123,8 +124,8 @@ public class GeoAssembler extends DatasetAssembler {
 
 
         // ---- Build
-
         Dataset dataset = DatasetFactory.wrap(base);
+        dataset.getContext().set(SpatialIndex.symSpatialIndexPerGraph, spatialIndexPerGraph);
 
         // Conversion of data. Startup-only.
         // needed for w3c:geo/wgs84_pos#lat/log.
@@ -147,8 +148,8 @@ public class GeoAssembler extends DatasetAssembler {
         //Setup GeoSPARQL
         if (indexEnabled) {
             GeoSPARQLConfig.setupMemoryIndex(indexSizes.get(0), indexSizes.get(1), indexSizes.get(2),
-                                             (long)indexExpiries.get(0), (long)indexExpiries.get(1), (long)indexExpiries.get(2),
-                                             queryRewrite);
+                    (long)indexExpiries.get(0), (long)indexExpiries.get(1), (long)indexExpiries.get(2),
+                    queryRewrite);
         } else {
             GeoSPARQLConfig.setupNoIndex(queryRewrite);
         }
