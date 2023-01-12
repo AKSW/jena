@@ -16,28 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.jena.sparql.expr;
+package org.apache.jena.sparql.function.library;
 
-public enum ValueSpaceClassification {
-    VSPACE_NODE,
-    VSPACE_TRIPLE_TERM,
+import org.apache.jena.sparql.expr.NodeValue;
+import org.apache.jena.sparql.expr.nodevalue.XSDFuncOp;
+import org.apache.jena.sparql.function.FunctionBase0;
 
-    VSPACE_NUM,
-    VSPACE_DATETIME,
-    VSPACE_DATE,
-    VSPACE_TIME,
-    VSPACE_DURATION,
-
-    // Collapse to VSPACE_DATETIME?
-    VSPACE_G_YEAR,
-    VSPACE_G_YEARMONTH,
-    VSPACE_G_MONTHDAY,
-    VSPACE_G_MONTH,
-    VSPACE_G_DAY,
-
-    VSPACE_STRING, VSPACE_LANG,
-    VSPACE_SORTKEY,
-    VSPACE_BOOLEAN,
-    VSPACE_UNKNOWN,
-    VSPACE_DIFFERENT
+public class FN_ImplicitTimezone extends FunctionBase0 {
+    @Override
+    public NodeValue exec() {
+        return XSDFuncOp.implicitTimezone();
+    }
 }
