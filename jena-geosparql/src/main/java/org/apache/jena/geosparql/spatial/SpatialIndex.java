@@ -22,7 +22,6 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.StreamSupport;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -37,10 +36,7 @@ import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
 import org.apache.jena.geosparql.spatial.serde.JtsKryoRegistrator;
-import org.apache.jena.graph.Graph;
-import org.apache.jena.graph.GraphUtil;
 import org.apache.jena.graph.Node;
-import org.apache.jena.graph.compose.MultiUnion;
 import org.apache.jena.graph.compose.Union;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -49,9 +45,7 @@ import org.apache.jena.rdf.model.*;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
-import org.apache.jena.sparql.util.ModelUtils;
 import org.apache.jena.sparql.util.Symbol;
-import org.apache.jena.sparql.util.graph.GraphUtils;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.index.strtree.STRtree;
@@ -75,12 +69,15 @@ public class SpatialIndex {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     public static final Symbol SPATIAL_INDEX_SYMBOL = Symbol.create("http://jena.apache.org/spatial#index");
+    public static final Symbol symSpatialIndexPerGraph = Symbol.create("http://jena.apache.org/spatial#indexPerGraph");
 
     private transient final SRSInfo srsInfo;
     private boolean isBuilt;
     private final STRtree defaultGraphTree;
     private Map<String, STRtree> graphToTree = new HashMap<>();
     private static final int MINIMUM_CAPACITY = 2;
+
+    private File location;
 
     private SpatialIndex() {
         this.defaultGraphTree = new STRtree(MINIMUM_CAPACITY);
@@ -242,6 +239,14 @@ public class SpatialIndex {
         }
     }
 
+    public File getLocation() {
+        return location;
+    }
+
+    public void setLocation(File location) {
+        this.location = location;
+    }
+
     public STRtree getDefaultGraphIndexTree() {
         return defaultGraphTree;
     }
@@ -336,6 +341,7 @@ public class SpatialIndex {
 
             save(spatialIndexFile, spatialIndex);
         }
+        spatialIndex.setLocation(spatialIndexFile);
 
         setSpatialIndex(dataset, spatialIndex);
         return spatialIndex;
@@ -687,6 +693,7 @@ public class SpatialIndex {
                 Map<String, STRtree> graphToTree = (Map<String, STRtree>) kryo.readClassAndObject(input);
 
                 SpatialIndex spatialIndex = new SpatialIndex(defaultGraphTree, graphToTree, srsUri);
+                spatialIndex.setLocation(spatialIndexFile);
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
                 return spatialIndex;
             } catch (IOException ex) {
