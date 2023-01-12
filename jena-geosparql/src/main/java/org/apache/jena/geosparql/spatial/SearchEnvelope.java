@@ -119,7 +119,7 @@ public class SearchEnvelope {
     }
 
     public HashSet<Node> check(SpatialIndex spatialIndex, String graph) {
-        HashSet<Node> features = spatialIndex.query(mainEnvelope);
+        HashSet<Node> features = spatialIndex.query(mainEnvelope, graph);
 
         if (wrapEnvelope != null) {
             HashSet<Node> wrapFeatures = spatialIndex.query(wrapEnvelope, graph);
