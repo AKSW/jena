@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -259,6 +260,10 @@ public class SpatialIndex {
         return graphToTree.containsKey(graph);
     }
 
+    public boolean removeGraphFromIndex(String graph) {
+        return graphToTree.remove(graph) != null;
+    }
+
     @Override
     public String toString() {
         return "SpatialIndex{" + "srsInfo=" + srsInfo + ", isBuilt=" + isBuilt + ", strTree=" + defaultGraphTree + '}';
@@ -477,10 +482,19 @@ public class SpatialIndex {
                                                        List<String> graphs) throws SpatialIndexException {
         dataset.begin(ReadWrite.READ);
         for (String g : graphs) {
-            LOGGER.info("recomputing spatial index for graph: {}", g);
+            if (index.graphToTree.containsKey(g)) {
+                LOGGER.info("recomputing spatial index for graph: {}", g);
+            } else {
+                LOGGER.info("computing spatial index for graph: {}", g);
+            }
             Model namedModel = dataset.getNamedModel(g);
             STRtree indexTree = buildSpatialIndexTree(namedModel, index.getSrsInfo().getSrsURI());
-            index.graphToTree.put(g, indexTree);
+            STRtree oldIndexTree = index.graphToTree.put(g, indexTree);
+            if (oldIndexTree != null) {
+                LOGGER.info("replaced spatial index for graph: {}", g);
+            } else {
+                LOGGER.info("added spatial index for graph: {}", g);
+            }
         }
         dataset.end();
         return index;
@@ -533,7 +547,7 @@ public class SpatialIndex {
 
         //Only add one set of statements as a converted dataset will duplicate the same info.
         if (model.contains(null, Geo.HAS_GEOMETRY_PROP, (Resource) null)) {
-            LOGGER.info("Feature-hasGeometry-Geometry statements found.");
+                LOGGER.info("Feature-hasGeometry-Geometry statements found.");
             if (model.contains(null, SpatialExtension.GEO_LAT_PROP, (Literal) null)) {
                 LOGGER.warn("Lat/Lon Geo predicates also found but will not be added to index.");
             }
