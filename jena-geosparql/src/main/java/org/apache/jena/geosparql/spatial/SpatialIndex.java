@@ -191,6 +191,8 @@ public class SpatialIndex {
         }
     }
 
+    public static Function<Resource, Object> resourceSerde = Resource::asNode;
+
     /**
      * Item to add to an unbuilt Spatial Index.
      *
@@ -200,7 +202,7 @@ public class SpatialIndex {
      */
     public final void insertItem(Envelope envelope, Resource item) throws SpatialIndexException {
         if (!isBuilt) {
-            defaultGraphTree.insert(envelope, item.asNode());
+            defaultGraphTree.insert(envelope, resourceSerde.apply(item));
         } else {
             throw new SpatialIndexException("SpatialIndex has been built and cannot have additional items.");
         }
@@ -313,7 +315,7 @@ public class SpatialIndex {
     public static STRtree buildSpatialIndexTree(Model m, String srsURI) throws SpatialIndexException {
         Collection<SpatialIndexItem> items = getSpatialIndexItems(m, srsURI);
         STRtree tree = new STRtree(Math.max(MINIMUM_CAPACITY, items.size()));
-        items.forEach(item -> tree.insert(item.getEnvelope(), item.getItem().asNode()));
+        items.forEach(item -> tree.insert(item.getEnvelope(), resourceSerde.apply(item.getItem())));
         return tree;
     }
 
@@ -547,7 +549,7 @@ public class SpatialIndex {
 
         //Only add one set of statements as a converted dataset will duplicate the same info.
         if (model.contains(null, Geo.HAS_GEOMETRY_PROP, (Resource) null)) {
-                LOGGER.info("Feature-hasGeometry-Geometry statements found.");
+            LOGGER.info("Feature-hasGeometry-Geometry statements found.");
             if (model.contains(null, SpatialExtension.GEO_LAT_PROP, (Literal) null)) {
                 LOGGER.warn("Lat/Lon Geo predicates also found but will not be added to index.");
             }
@@ -711,6 +713,80 @@ public class SpatialIndex {
                 LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
                 return spatialIndex;
             } catch (IOException ex) {
+                throw new SpatialIndexException("Loading Exception: " + ex.getMessage(), ex);
+            }
+        } else {
+            LOGGER.info("File {} does not exist. Creating empty Spatial Index.", (spatialIndexFile != null ? spatialIndexFile.getAbsolutePath() : "null"));
+            return new SpatialIndex();
+        }
+    }
+
+    /**
+     * Save SpatialIndex to file.
+     *
+     * @param spatialIndexFile the file being saved to
+     * @param index the spatial index
+     * @throws SpatialIndexException
+     */
+    public static final void saveWithJavaSerde(File spatialIndexFile, SpatialIndex index) throws SpatialIndexException {
+
+        if (spatialIndexFile != null) {
+            LOGGER.info("Saving Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
+
+            String filename = spatialIndexFile.getAbsolutePath();
+            Path file = Path.of(filename);
+            Path tmpFile = IOX.uniqueDerivedPath(file, null);
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException ex) {
+                throw new SpatialIndexException("Failed to delete file: " + ex.getMessage());
+            }
+            try {
+                Kryo kryo = new Kryo();
+                JtsKryoRegistrator.registerClasses(kryo);
+
+                IOX.safeWriteOrCopy(file, tmpFile,
+                        out->{
+                            ObjectOutputStream oos = new ObjectOutputStream(out);
+                            oos.writeObject(index.srsInfo.getSrsURI());
+                            oos.writeObject(index.defaultGraphTree);
+                            oos.writeObject(index.graphToTree);
+                            oos.close();
+                        });
+            } catch (RuntimeIOException ex) {
+                throw new SpatialIndexException("Save Exception: " + ex.getMessage());
+            } finally {
+                LOGGER.info("Saving Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
+            }
+
+        }
+    }
+
+    /**
+     * Load a SpatialIndex from file.<br>
+     * Index will be built and empty if file does not exist or is null.
+     *
+     * @param spatialIndexFile
+     * @return Built Spatial Index.
+     * @throws SpatialIndexException
+     */
+    public static final SpatialIndex loadWithJavaSerde(File spatialIndexFile) throws SpatialIndexException {
+        Kryo kryo = new Kryo();
+        JtsKryoRegistrator.registerClasses(kryo);
+
+        if (spatialIndexFile != null && spatialIndexFile.exists()) {
+            LOGGER.info("Loading Spatial Index - Started: {}", spatialIndexFile.getAbsolutePath());
+
+            try (ObjectInputStream input = new ObjectInputStream(new FileInputStream(spatialIndexFile))) {
+                String srsUri = (String) input.readObject();
+                STRtree defaultGraphTree = (STRtree) input.readObject();
+                Map<String, STRtree> graphToTree = (Map<String, STRtree>) input.readObject();
+
+                SpatialIndex spatialIndex = new SpatialIndex(defaultGraphTree, graphToTree, srsUri);
+                spatialIndex.setLocation(spatialIndexFile);
+                LOGGER.info("Loading Spatial Index - Completed: {}", spatialIndexFile.getAbsolutePath());
+                return spatialIndex;
+            } catch (IOException | ClassNotFoundException ex) {
                 throw new SpatialIndexException("Loading Exception: " + ex.getMessage(), ex);
             }
         } else {
