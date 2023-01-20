@@ -29,6 +29,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import org.apache.jena.atlas.RuntimeIOException;
 import org.apache.jena.atlas.io.IOX;
+import org.apache.jena.datatypes.DatatypeFormatException;
 import org.apache.jena.geosparql.configuration.GeoSPARQLOperations;
 import org.apache.jena.geosparql.implementation.GeometryWrapper;
 import org.apache.jena.geosparql.implementation.SRSInfo;
@@ -77,6 +78,9 @@ public class SpatialIndex {
     private final STRtree defaultGraphTree;
     private Map<String, STRtree> graphToTree = new HashMap<>();
     private static final int MINIMUM_CAPACITY = 2;
+
+    // fast fail on illegal geometry literal
+    public static boolean PARSE_FAIL_ON_ERROR = true;
 
     private File location;
 
@@ -589,15 +593,22 @@ public class SpatialIndex {
 
             while (nodeIter.hasNext()) {
                 Literal geometryLiteral = nodeIter.next().asLiteral();
-                GeometryWrapper geometryWrapper = GeometryWrapper.extract(geometryLiteral);
 
                 try {
+                    GeometryWrapper geometryWrapper = GeometryWrapper.extract(geometryLiteral);
+
                     //Ensure all entries in the target SRS URI.
                     GeometryWrapper transformedGeometryWrapper = geometryWrapper.convertSRS(srsURI);
 
                     Envelope envelope = transformedGeometryWrapper.getEnvelope();
                     SpatialIndexItem item = new SpatialIndexItem(envelope, feature);
                     items.add(item);
+                } catch (DatatypeFormatException e) {
+                    if (!PARSE_FAIL_ON_ERROR) {
+                        LOGGER.warn(String.format("Illegal geometry literal for feature %s. Skipping feature!", feature.toString()), e);
+                    } else {
+                        throw e;
+                    }
                 } catch (FactoryException | MismatchedDimensionException | TransformException ex) {
                     throw new SpatialIndexException("Transformation Exception: " + geometryLiteral + ". " + ex.getMessage());
                 }
