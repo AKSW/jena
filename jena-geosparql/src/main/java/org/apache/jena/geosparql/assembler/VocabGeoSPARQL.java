@@ -75,6 +75,8 @@ public class VocabGeoSPARQL {
 
     public static final Property pSpatialIndexPerGraph = property("spatialIndexPerGraph");
 
+    public static final Property pSrsUri = property("srsUri");
+
     // Dataset
     public static final Property pDataset = property("dataset");
 }
