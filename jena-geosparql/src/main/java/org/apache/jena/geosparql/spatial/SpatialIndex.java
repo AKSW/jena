@@ -71,6 +71,7 @@ public class SpatialIndex {
 
     public static final Symbol SPATIAL_INDEX_SYMBOL = Symbol.create("http://jena.apache.org/spatial#index");
     public static final Symbol symSpatialIndexPerGraph = Symbol.create("http://jena.apache.org/spatial#indexPerGraph");
+    public static final Symbol symSrsUri = Symbol.create("http://jena.apache.org/spatial#srsURI");
 
     private transient final SRSInfo srsInfo;
     private boolean isBuilt;
