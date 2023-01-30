@@ -21,14 +21,14 @@
       <div class="row">
         <Menu />
       </div>
-      <router-view/>
+      <router-view />
     </div>
     <Toast />
   </div>
 </template>
 
 <script>
-import Menu from '@/components/Menu'
+import Menu from '@/components/Menu.vue'
 
 export default {
   name: 'App',

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-const PORT = 3030
+const PORT = process.env.FUSEKI_PORT || 3030
 
 const data = {}
 
@@ -36,11 +36,6 @@ const builtTime = new Date()
 const startTime = new Date()
 
 // Add custom routes before JSON Server router
-
-// GET PING STATUS
-server.get('/\\$/ping', (req, res) => {
-  res.jsonp(new Date().toISOString())
-})
 
 // GET SERVER INFO
 server.get('/\\$/server', (req, res) => {
@@ -262,8 +257,13 @@ server.get('/:datasetName', (req, res) => {
 })
 
 // PING
+// GET PING STATUS
 server.get('/\\$/ping', (req, res) => {
-  res.sendStatus(200)
+  res
+    .status(200)
+    .jsonp({
+      body: new Date().toISOString()
+    })
 })
 
 // RESET TEST DATA

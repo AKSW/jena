@@ -19,12 +19,12 @@
  * A plug-in to replace Bootstrap Vue's Toasts.
  */
 import { BUS } from '@/events'
-import Toast from '@/components/Toast'
+import Toast from '@/components/Toast.vue'
 
 export default {
   install (vm) {
     // Add the global $toast object.
-    vm.prototype.$toast = {
+    vm.config.globalProperties.$toast = {
       error (message, options = {}) {
         this.send(message, 'danger', options)
       },
@@ -32,7 +32,7 @@ export default {
         this.send(message, 'primary', options)
       },
       send (message, type, options) {
-        BUS.$emit('toast', {
+        BUS.emit('toast', {
           message,
           type,
           options

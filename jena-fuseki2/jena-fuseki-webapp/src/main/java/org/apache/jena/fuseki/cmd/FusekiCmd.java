@@ -30,7 +30,6 @@ import org.apache.jena.cmd.CmdException;
 import org.apache.jena.cmd.TerminationException;
 import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.fuseki.FusekiException;
-import org.apache.jena.fuseki.jetty.JettyServerConfig;
 import org.apache.jena.fuseki.mgt.Template;
 import org.apache.jena.fuseki.system.FusekiLogging;
 import org.apache.jena.fuseki.webapp.FusekiEnv;
@@ -87,7 +86,7 @@ public class FusekiCmd {
         private static ArgDecl argLocalhost     = new ArgDecl(ArgDecl.NoValue,  "localhost", "local");
         private static ArgDecl argTimeout       = new ArgDecl(ArgDecl.HasValue, "timeout");
         private static ArgDecl argFusekiConfig  = new ArgDecl(ArgDecl.HasValue, "config", "conf");
-        private static ArgDecl argJettyConfig   = new ArgDecl(ArgDecl.HasValue, "jetty-config");
+        private static ArgDecl argJettyConfig   = new ArgDecl(ArgDecl.HasValue, "jetty-config", "jetty");
         private static ArgDecl argGZip          = new ArgDecl(ArgDecl.HasValue, "gzip");
 
         // Deprecated.  Use shiro.

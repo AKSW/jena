@@ -23,6 +23,7 @@ import static arq.cmdline.ModAssembler.assemblerDescDecl;
 import java.net.BindException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import arq.cmdline.CmdARQ;
@@ -32,14 +33,16 @@ import org.apache.jena.atlas.lib.FileOps;
 import org.apache.jena.atlas.logging.FmtLog;
 import org.apache.jena.atlas.web.AuthScheme;
 import org.apache.jena.cmd.ArgDecl;
+import org.apache.jena.cmd.ArgModuleGeneral;
 import org.apache.jena.cmd.CmdException;
 import org.apache.jena.cmd.TerminationException;
 import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.fuseki.FusekiException;
+import org.apache.jena.fuseki.main.FusekiMainInfo;
 import org.apache.jena.fuseki.main.FusekiServer;
 import org.apache.jena.fuseki.server.DataAccessPoint;
 import org.apache.jena.fuseki.server.DataAccessPointRegistry;
-import org.apache.jena.fuseki.server.FusekiInfo;
+import org.apache.jena.fuseki.server.FusekiCoreInfo;
 import org.apache.jena.fuseki.servlets.SPARQL_QueryGeneral;
 import org.apache.jena.fuseki.validation.DataValidator;
 import org.apache.jena.fuseki.validation.IRIValidator;
@@ -87,6 +90,7 @@ public class FusekiMain extends CmdARQ {
     private static ArgDecl  argGZip         = new ArgDecl(ArgDecl.HasValue, "gzip");
     private static ArgDecl  argBase         = new ArgDecl(ArgDecl.HasValue, "base", "files");
 
+    // This is now a no-op - CORS is included unless "--no-cors" is used.
     private static ArgDecl  argCORS         = new ArgDecl(ArgDecl.NoValue,  "withCORS", "cors", "CORS");
     private static ArgDecl  argNoCORS       = new ArgDecl(ArgDecl.NoValue,  "noCORS", "no-cors");
     private static ArgDecl  argWithPing     = new ArgDecl(ArgDecl.NoValue,  "withPing", "ping");
@@ -107,6 +111,10 @@ public class FusekiMain extends CmdARQ {
     private static ArgDecl  argSparqler     = new ArgDecl(ArgDecl.HasValue, "sparqler");
 
     private static ArgDecl  argValidators   = new ArgDecl(ArgDecl.NoValue,  "validators");
+
+    private static List<ArgModuleGeneral> additionalArgs = new ArrayList<>();
+    public static void addArgModule(ArgModuleGeneral argModule) { additionalArgs.add(argModule); }
+
     // private static ModLocation modLocation = new ModLocation();
     private static ModDatasetAssembler modDataset      = new ModDatasetAssembler();
 
@@ -134,19 +142,22 @@ public class FusekiMain extends CmdARQ {
             TransactionManager.QueueBatchSize = TransactionManager.QueueBatchSize / 2;
 
         getUsage().startCategory("Fuseki Main");
+
+        additionalArgs.forEach(aMod->super.addModule(aMod));
+
         // Control the order!
         add(argMem, "--mem",
             "Create an in-memory, non-persistent dataset for the server");
         add(argFile, "--file=FILE",
             "Create an in-memory, non-persistent dataset for the server, initialised with the contents of the file");
         add(argTDB2mode, "--tdb2",
-            "Use TDB2 for command line persistent datasets (dfault is TDB1)");
+            "Use TDB2 for command line persistent datasets (default is TDB1)");
         add(argTDB, "--loc=DIR",
             "Use an existing TDB database (or create if does not exist)");
         add(argMemTDB, "--memTDB",
             "Create an in-memory, non-persistent dataset using TDB (testing only)");
 //            add(argEmpty, "--empty",
-//                "Run with no datasets and services (validators only)");
+//                "Run with no datasets and services");
         add(argRDFS, "--rdfs=FILE",
             "Apply RDFS on top of the dataset");
         add(argConfig, "--config=FILE",
@@ -173,7 +184,7 @@ public class FusekiMain extends CmdARQ {
             "Add a general SPARQL endpoint (without a dataset) at /PATH");
 
         add(argAuth, "--auth=[basic|digest]",
-            "Run the server using basic or digest authentication (dft: digest).");
+            "Run the server using basic or digest authentication");
         add(argHttps, "--https=CONF",
             "https certificate access details. JSON file { \"cert\":FILE , \"passwd\"; SECRET } ");
         add(argHttpsPort, "--httpsPort=NUM",
@@ -469,8 +480,10 @@ public class FusekiMain extends CmdARQ {
     @Override
     protected void exec() {
         try {
+            Logger log = Fuseki.serverLog;
+            FusekiMainInfo.logServerCode(log);
             FusekiServer server = buildServer(serverConfig);
-            info(server);
+            infoCmd(server, log);
             try {
                 server.start();
             } catch (FusekiException ex) {
@@ -572,15 +585,11 @@ public class FusekiMain extends CmdARQ {
         return builder.build();
     }
 
-    private void info(FusekiServer server) {
+    /** Information from the command line setup */
+    private void infoCmd(FusekiServer server, Logger log) {
         if ( super.isQuiet() )
             return;
 
-        Logger log = Fuseki.serverLog;
-
-        FusekiInfo.server(log);
-
-        DataAccessPointRegistry dapRegistry = DataAccessPointRegistry.get(server.getServletContext());
         if ( serverConfig.empty ) {
             FmtLog.info(log, "No SPARQL datasets services");
         } else {
@@ -588,6 +597,7 @@ public class FusekiMain extends CmdARQ {
                 log.error("No dataset path nor server configuration file");
         }
 
+        DataAccessPointRegistry dapRegistry = DataAccessPointRegistry.get(server.getServletContext());
         if ( serverConfig.datasetPath != null ) {
             if ( dapRegistry.size() != 1 )
                 log.error("Expected only one dataset in the DataAccessPointRegistry");
@@ -601,8 +611,8 @@ public class FusekiMain extends CmdARQ {
         boolean verbose = serverConfig.verboseLogging;
 
         if ( ! super.isQuiet() )
-            FusekiInfo.logServerSetup(log, verbose, dapRegistry,
-                                      datasetPath, datasetDescription, serverConfigFile, staticFiles);
+            FusekiCoreInfo.logServerCmdSetup(log, verbose, dapRegistry,
+                                             datasetPath, datasetDescription, serverConfigFile, staticFiles);
     }
 
     @Override

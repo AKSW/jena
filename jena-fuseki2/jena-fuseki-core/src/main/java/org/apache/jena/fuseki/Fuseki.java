@@ -81,10 +81,7 @@ public class Fuseki {
     static private Metadata metadata                     = initMetadata();
 
     private static Metadata initMetadata() {
-        Metadata m = new Metadata();
-        // m.addMetadata(metadataDevLocation);
-        m.addMetadata(metadataLocation);
-        return m;
+        return new Metadata(metadataLocation);
     }
 
     /** The name of the Fuseki server.*/
@@ -205,7 +202,12 @@ public class Fuseki {
     }
 
     public static boolean getVerbose(ServletContext cxt) {
-        return (Boolean)cxt.getAttribute(attrVerbose);
+        Object x = cxt.getAttribute(attrVerbose);
+        if ( x == null )
+            return false;
+        if ( x instanceof Boolean )
+            return (Boolean)x;
+        throw new FusekiException("attrVerbose: unknown object class: "+x.getClass().getName());
     }
 
     /**

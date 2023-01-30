@@ -30,7 +30,7 @@ import org.apache.jena.shex.expressions.TripleConstraint;
 import org.apache.jena.shex.sys.ReportItem;
 import org.apache.jena.shex.sys.ValidationContext;
 
-public class ShapeEvalTripleConstraint {
+/*package*/ class ShapeEvalTripleConstraint {
 
     /** Triple Constraint, with cardinality */
     static boolean matchesCardinalityTC(ValidationContext vCxt, Set<Triple> matchables, Node node,
@@ -72,6 +72,11 @@ public class ShapeEvalTripleConstraint {
             vCxt.reportEntry(new ReportItem("Cardinality violation (max="+max+"): "+N, null));
             return false;
         }
+
+        boolean b = tripleConstraint.testSemanticActions(vCxt, matchables);
+        if ( ! b )
+            return false;
+
         return true;
     }
 }

@@ -33,7 +33,6 @@ import org.apache.jena.atlas.iterator.Iter;
 import org.apache.jena.atlas.iterator.IteratorCloseable;
 import org.apache.jena.atlas.iterator.IteratorOnClose;
 import org.apache.jena.atlas.lib.Closeable;
-import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.ext.com.google.common.collect.Iterators;
 import org.apache.jena.ext.com.google.common.collect.Range;
 import org.apache.jena.ext.com.google.common.collect.RangeMap;
@@ -71,6 +70,8 @@ import org.apache.jena.sparql.service.enhancer.slice.api.ReadableChannelWithLimi
 import org.apache.jena.sparql.service.enhancer.slice.api.Slice;
 import org.apache.jena.sparql.service.enhancer.slice.api.SliceAccessor;
 import org.apache.jena.sparql.util.NodeFactoryExtra;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * QueryIter to process service requests in bulk with support for streaming caching.
@@ -81,6 +82,8 @@ import org.apache.jena.sparql.util.NodeFactoryExtra;
 public class QueryIterServiceBulk
     extends QueryIterSlottedBase
 {
+    private static final Logger logger = LoggerFactory.getLogger(QueryIterServiceBulk.class);
+
     protected OpServiceInfo serviceInfo;
     protected ServiceCacheKeyFactory cacheKeyFactory;
 
@@ -115,7 +118,7 @@ public class QueryIterServiceBulk
 
     protected TreeBasedTable<Integer, Integer, Integer> inputToRangeToOutput = TreeBasedTable.create();
 
-    // This is the reverse mapping of the table above; PartitionKey = (inputId, rangeId)
+    // This is the reverse mapping of the table above; SliceKey = (inputId, rangeId)
     protected Map<Integer, SliceKey> outputToSliceKey = new HashMap<>();
 
     // The set of outputIds that are served from the backend (absent means served from cache)
@@ -196,16 +199,16 @@ public class QueryIterServiceBulk
             boolean isBackendIt = sliceKeysForBackend.contains(partKey);
 
             if (isBackendIt && !activeIt.hasNext()) {
-                Log.debug(QueryIterServiceBulk.class, "Iterator ended without end marker - assuming remote result set limit reached");
+                logger.debug("Iterator ended without end marker - assuming remote result set limit reached");
                 long seenBackendData = backendIt.getOffset();
                 backendResultSetLimit = new Estimate<>(seenBackendData, true);
                 if (seenBackendData <= 0) {
-                    Log.warn(QueryIterServiceBulk.class, "Known result set limit of " + seenBackendData + " detected");
+                    logger.warn("Known result set limit of " + seenBackendData + " detected");
                 }
 
                 resultSizeCache.updateLimit(targetService, backendResultSetLimit);
 
-                // We obtained to few data for the current id - repeat the request
+                // We obtained too little data for the current id - repeat the request
                 prepareNextBatchExec(false);
                 continue;
             }
@@ -455,7 +458,7 @@ public class QueryIterServiceBulk
     // seqId = sequential number injected into the request
     // inputId = id (index) of the input binding
     // rangeId = id of the range w.r.t. to the input binding
-    // partitionKey = (inputId, rangeId)
+    // sliceKey = (inputId, rangeId)
     public void prepareNextBatchExec(boolean bypassCacheOnFirstInput) {
 
         freeResources();
@@ -470,7 +473,10 @@ public class QueryIterServiceBulk
         int nextAllocOutputId = 0;
         int batchSize = inputs.size();
 
-        Log.info(QueryIterServiceBulk.class, "Schedule for current batch:");
+        if (logger.isInfoEnabled()) {
+            logger.info("Schedule for current batch:");
+        }
+
         int rangeId = currentRangeId;
 
         for (int inputId = currentInputId; inputId < batchSize; ++inputId) {
@@ -508,7 +514,9 @@ public class QueryIterServiceBulk
 
                 lock = slice.getReadWriteLock().readLock();
 
-                Log.debug(QueryIterServiceBulk.class, "Created cache key: " + cacheKey);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Created cache key: " + cacheKey);
+                }
                 // Log.debug(BatchRequestIterator.class, "Cached ranges: " + slice.getLoadedRanges().toString());
 
                 lock.lock();
@@ -577,25 +585,32 @@ public class QueryIterServiceBulk
                 //   - We need to start the backend request from the request offset
                 //   - The issue is how to handle the next binding
 
-                Log.info(QueryIterServiceBulk.class, "input " + inputId + ": " +
-                    allRanges.toString()
-                        .replace("false", "fetch")
-                        .replace("true", "cached"));
-
+                if (logger.isInfoEnabled()) {
+                    logger.info("input " + inputId + ": " +
+                        allRanges.toString()
+                            .replace("false", "fetch")
+                            .replace("true", "cached"));
+                }
                 Map<Range<Long>, Boolean> mapOfRanges = allRanges.asMapOfRanges();
 
                 if (mapOfRanges.isEmpty()) {
                     // Special case if it is known that there are no bindings:
-                    // Register an empty iterator
-                    SliceKey partitionKey = new SliceKey(inputId, rangeId);
-                    QueryIterPeek it = QueryIterPeek.create(new QueryIterNullIterator(execCxt), execCxt);
-                    sliceKeyToIter.put(partitionKey, it);
-                    sliceKeyToClose.add(partitionKey); // it);
+                    // Register an empty iterator for (inputId, rangeId)
 
-                    // Close the cache ref immediately
+                    // Release the reference to the cache entry immediately
                     if (cacheValueRef != null) {
                         cacheValueRef.close();
                     }
+
+                    SliceKey sliceKey = new SliceKey(inputId, rangeId);
+                    QueryIterPeek it = QueryIterPeek.create(new QueryIterNullIterator(execCxt), execCxt);
+                    sliceKeyToIter.put(sliceKey, it);
+                    sliceKeyToClose.add(sliceKey);
+
+                    inputToRangeToOutput.put(inputId, rangeId, nextAllocOutputId);
+                    outputToSliceKey.put(nextAllocOutputId, sliceKey);
+                    ++rangeId;
+                    ++nextAllocOutputId;
                 } else {
                     Iterator<Entry<Range<Long>, Boolean>> rangeIt = mapOfRanges.entrySet().iterator();
 
@@ -603,7 +618,7 @@ public class QueryIterServiceBulk
 
                     boolean usesCacheRead = false;
                     while (rangeIt.hasNext()) {
-                        SliceKey partitionKey = new SliceKey(inputId, rangeId);
+                        SliceKey sliceKey = new SliceKey(inputId, rangeId);
                         Entry<Range<Long>, Boolean> f = rangeIt.next();
 
                         Range<Long> range = f.getKey();
@@ -654,17 +669,16 @@ public class QueryIterServiceBulk
 
                             QueryIterPeek it = QueryIterPeek.create(qIterB, execCxt);
 
-                            sliceKeyToIter.put(partitionKey, it);
-                            sliceKeyToClose.add(partitionKey); // it);
+                            sliceKeyToIter.put(sliceKey, it);
+                            sliceKeyToClose.add(sliceKey);
                         } else {
                             PartitionRequest<Binding> request = new PartitionRequest<>(nextAllocOutputId, inputBinding, lo, lim);
                             backendRequests.put(nextAllocOutputId, request);
-                            sliceKeysForBackend.add(partitionKey);
+                            sliceKeysForBackend.add(sliceKey);
                         }
 
                         inputToRangeToOutput.put(inputId, rangeId, nextAllocOutputId);
-                        outputToSliceKey.put(nextAllocOutputId, partitionKey);
-
+                        outputToSliceKey.put(nextAllocOutputId, sliceKey);
                         ++rangeId;
                         ++nextAllocOutputId;
                     }

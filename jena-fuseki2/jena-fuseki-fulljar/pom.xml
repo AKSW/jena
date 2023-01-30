@@ -25,13 +25,17 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena-fuseki</artifactId>
-    <version>4.7.0-SNAPSHOT</version>
+    <version>4.8.0-SNAPSHOT</version>
     <relativePath>../</relativePath>
   </parent> 
 
   <packaging>jar</packaging>
   <description>Fuseki Webapp - combined jar with built-in webserver.</description>
 
+  <properties>
+    <automatic.module.name>org.apache.jena.fuseki.fulljar</automatic.module.name>
+  </properties>
+  
   <dependencies>
 
     <dependency>

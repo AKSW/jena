@@ -33,12 +33,18 @@ import org.apache.jena.sparql.util.PropertyRequiredException ;
 import org.apache.jena.sparql.util.QueryExecUtils;
 import org.apache.jena.sparql.util.TypeNotUniqueException ;
 import org.apache.jena.util.iterator.ExtendedIterator ;
+import org.apache.jena.util.iterator.NiceIterator;
 import org.apache.jena.vocabulary.RDF ;
 
 /** Graph utilities. See also GraphFactory. */
 
 public class GraphUtils {
 
+    // Only used by DatasetDescriptionAssembler
+    // (and DatasetDescriptionAssembler itself is unused)
+    /**
+     * Get all the literals for a resource-property.
+     */
     public static List<String> multiValueString(Resource r, Property p) {
         List<RDFNode> nodes = multiValue(r, p) ;
         List<String> values = new ArrayList<>() ;
@@ -229,14 +235,42 @@ public class GraphUtils {
 
     /** All subjects and objects, no duplicates. */
     public static Iterator<Node> allNodes(Graph graph) {
-        Set<Node> x = new HashSet<>(1000) ;
         ExtendedIterator<Triple> iter = graph.find(Node.ANY, Node.ANY, Node.ANY) ;
-        for ( ; iter.hasNext() ; ) {
-            Triple t = iter.next() ;
-            x.add(t.getSubject()) ;
-            x.add(t.getObject()) ;
+        IterSO iterSO = new IterSO(iter);
+        Iterator<Node> distinctIterator = Iter.distinct(iterSO);
+        return distinctIterator;
+    }
+
+    static class IterSO extends NiceIterator<Node> {
+        private ExtendedIterator<Triple> it;
+        private boolean tripleConsumed;
+        private Triple triple;
+
+        IterSO(ExtendedIterator<Triple> it) {
+            this.it = it;
+            this.tripleConsumed = true;
         }
-        iter.close() ;
-        return x.iterator() ;
+
+        @Override
+        public void close() {
+            it.close();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return !this.tripleConsumed || it.hasNext();
+        }
+
+        @Override
+        public Node next() {
+            if (this.tripleConsumed) {
+                triple = it.next();
+                tripleConsumed = false;
+                return triple.getSubject();
+            } else {
+                tripleConsumed = true;
+                return triple.getObject();
+            }
+        }
     }
 }

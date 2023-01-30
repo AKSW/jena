@@ -35,11 +35,10 @@
                     placeholder="Filter tasks"
                     empty-text="No tasks created"
                     empty-filtered-text="No tasks found"
-                  >
-                  </table-listing>
+                  />
                 </div>
               </div>
-           </div>
+            </div>
           </div>
         </div>
       </div>
@@ -48,8 +47,8 @@
 </template>
 
 <script>
-import Menu from '@/components/manage/Menu'
-import TableListing from '@/components/dataset/TableListing'
+import Menu from '@/components/manage/Menu.vue'
+import TableListing from '@/components/dataset/TableListing.vue'
 
 export default {
   name: 'ManageTasks',
@@ -108,7 +107,7 @@ export default {
         .getTasks()
         .then(response => {
           vm.tasks = response.data
-          vm.isBusy = false
+          vm.isBusy = null
         })
     })
   },
@@ -121,7 +120,7 @@ export default {
         .getTasks()
         .then(response => {
           vm.tasks = response.data
-          vm.isBusy = false
+          vm.isBusy = null
         })
     }, 10000)
   },

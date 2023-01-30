@@ -35,6 +35,8 @@ import org.apache.jena.sparql.expr.aggregate.lib.* ;
 import org.apache.jena.update.* ;
 import org.apache.jena.sparql.modify.request.* ;
 import org.apache.jena.sparql.core.Quad ;
+import java.util.List;
+import java.util.ArrayList;
 public class ARQParser extends ARQParserBase
 {}
 PARSER_END(ARQParser)
@@ -613,6 +615,8 @@ Element GraphPatternNotTriples() : { Element el = null ; }
  |
    el = OptionalGraphPattern()
  |
+   el = LateralGraphPattern()
+ |
    el = MinusGraphPattern()
  |
    el = GraphGraphPattern()
@@ -636,6 +640,10 @@ Element GraphPatternNotTriples() : { Element el = null ; }
 Element OptionalGraphPattern() : { Element el ; }
 { <OPTIONAL> el = GroupGraphPattern()
     { return new ElementOptional(el) ; }
+}
+Element LateralGraphPattern() : { Element el ; }
+{ <LATERAL> el = GroupGraphPattern()
+    { return new ElementLateral(el) ; }
 }
 Element GraphGraphPattern() : { Element el ; Node n ;}
 {
@@ -1451,6 +1459,9 @@ Expr BuiltInCall() : { Expr expr ;
   | <SECONDS> <LPAREN> expr1 = Expression() <RPAREN> { return new E_DateTimeSeconds(expr1) ; }
   | <TIMEZONE> <LPAREN> expr1 = Expression() <RPAREN> { return new E_DateTimeTimezone(expr1) ; }
   | <TZ> <LPAREN> expr1 = Expression() <RPAREN> { return new E_DateTimeTZ(expr1) ; }
+  | <ADJUST>
+    <LPAREN> expr1 = Expression() (<COMMA> expr2 = Expression())? <RPAREN>
+    { return new E_AdjustToTimezone(expr1, expr2) ; }
   | <NOW> <NIL> { return new E_Now() ; }
   | <UUID> <NIL> { return new E_UUID() ; }
   | <STRUUID> <NIL> { return new E_StrUUID() ; }
@@ -1783,6 +1794,7 @@ TOKEN [IGNORE_CASE] :
 | < SUBJECT: "SUBJECT" >
 | < PREDICATE: "PREDICATE" >
 | < OBJECT: "OBJECT" >
+| < LATERAL: "LATERAL" >
 | < EXISTS: "exists" >
 | < NOT: "not" >
 | < AS: "as" >
@@ -1857,6 +1869,7 @@ TOKEN [IGNORE_CASE] :
 | < SECONDS: "SECONDS" >
 | < TIMEZONE: "TIMEZONE" >
 | < TZ: "TZ" >
+| < ADJUST: "ADJUST" >
 | < NOW: "NOW" >
 | < UUID: "UUID" >
 | < STRUUID: "STRUUID" >

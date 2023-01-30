@@ -29,7 +29,6 @@ import org.junit.runners.Suite.SuiteClasses;
 
   // This tests modules and modifies the system state.
   , TestFusekiModules.class
-  , TestEmbeddedFuseki.class
   , TestMultipleEmbedded.class
   , TestFusekiCustomOperation.class
   , TestFusekiMainCmd.class
@@ -45,6 +44,8 @@ import org.junit.runners.Suite.SuiteClasses;
 
   , TestQuery.class
   , TestSPARQLProtocol.class
+
+  , TestPatchFuseki.class
 
   // Test ping.
   , TestMetrics.class

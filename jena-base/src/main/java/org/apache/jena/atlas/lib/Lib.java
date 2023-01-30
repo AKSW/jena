@@ -90,7 +90,7 @@ public class Lib
         return new UnsupportedOperationException(Lib.className(object) + "." + method);
     }
 
-    /** Do two lists have the same elements without considering the order of the lists? */
+    /** Do two lists have the same elements without considering the order of the lists nor duplicates? */
     public static <T> boolean equalsListAsSet(List<T> list1, List<T> list2) {
         if ( list1 == null && list2 == null )
             return true ;
@@ -112,6 +112,14 @@ public class Lib
     public static final void sleep(int milliSeconds) {
         try  { Thread.sleep(milliSeconds) ; }
         catch (InterruptedException ex) { Log.warn(Lib.class, "interrupted", ex) ; }
+    }
+
+    /** Get an environment variable value; if not found try in the system properties. */
+    public static String getenv(String name) {
+        String x = System.getenv(name);
+        if ( x == null )
+            x = System.getProperty(name);
+        return x;
     }
 
     /**

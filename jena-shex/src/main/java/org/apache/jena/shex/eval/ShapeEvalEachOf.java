@@ -29,7 +29,6 @@ import org.apache.jena.shex.expressions.TripleExpression;
 import org.apache.jena.shex.expressions.TripleExprEachOf;
 import org.apache.jena.shex.sys.ValidationContext;
 
-public
 /*package*/ class ShapeEvalEachOf {
     // Sufficiently large and complex so separated from ShapeEval.
 
@@ -96,8 +95,9 @@ public
                     break;
                 }
             }
-            // This partition works.
-            if ( success )
+
+            // If this partition satisfies the nested expressions, test SemActs.
+            if ( success && eachOf.testSemanticActions(vCxt, matchables) )
                 return true;
         }
         return false;
@@ -122,11 +122,8 @@ public
 //        if ( triples.stream().noneMatch(t->predicateToTripleExprs.containsKey(t.getPredicate())) )
 //            return null;
 
-
         // Start. One empty partition
         List<Set<Triple>> emptyPartial = emptyPartition(tripleExprs);
-
-
         List<List<Set<Triple>>> partials = new ArrayList<>();
         partials.add(emptyPartial);
 
@@ -178,5 +175,4 @@ public
         }
         return partition;
     }
-
 }

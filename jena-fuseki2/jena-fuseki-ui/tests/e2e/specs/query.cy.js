@@ -51,7 +51,6 @@ describe('Query', () => {
   it('Uses the correct SPARQL Endpoint', () => {
     const SPARQL_ENDPOINT = '/skosmos/update'
     cy.visit('/#/dataset/skosmos/query')
-    cy.server()
     cy
       .intercept('POST', SPARQL_ENDPOINT, {
         statusCode: 203,
@@ -75,5 +74,35 @@ describe('Query', () => {
       .wait('@sparql')
       .its('response')
       .should('have.property', 'statusCode', 203)
+  })
+  it('Can resize the query editor', () => {
+    cy.visit('/#/dataset/skosmos/query')
+    // TODO: The .then(() => {}) is a bug/regression in Cypress 12 - https://github.com/cypress-io/cypress/issues/25173#issuecomment-1358017970
+    cy
+      .get('div.CodeMirror')
+      .should('be.visible')
+      .invoke('css', 'height')
+      .then(() => {})
+      .as('beforeHeight')
+    cy
+      .get('div.resizeChip')
+      .should('exist')
+      .trigger('mousedown', {
+        which: 1, force: true
+      })
+      .trigger('mousemove', { which: 1, force: true, x: 0, y: 150 })
+      .trigger('mouseup', {
+        force: true
+      });
+    cy
+      .get('div.CodeMirror')
+      .invoke('css', 'height')
+      .then(() => {})
+      .as('afterHeight')
+    cy.get('@beforeHeight').then(beforeHeight => {
+      cy.get('@afterHeight').then(afterHeight => {
+        expect(afterHeight).to.not.equal(beforeHeight)
+      })
+    })
   })
 })
