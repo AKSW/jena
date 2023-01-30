@@ -313,8 +313,14 @@ public class SpatialIndex {
 
     public static STRtree buildSpatialIndexTree(Model m, String srsURI) throws SpatialIndexException {
         Collection<SpatialIndexItem> items = getSpatialIndexItems(m, srsURI);
+        STRtree tree = buildSpatialIndexTree(items);
+        return tree;
+    }
+
+    public static STRtree buildSpatialIndexTree(Collection<SpatialIndexItem> items) throws SpatialIndexException {
         STRtree tree = new STRtree(Math.max(MINIMUM_CAPACITY, items.size()));
         items.forEach(item -> tree.insert(item.getEnvelope(), item.getItem().asNode()));
+        LOGGER.info("{} geospatial features have been indexed", items.size());
         return tree;
     }
 
@@ -396,10 +402,11 @@ public class SpatialIndex {
         // we always compute an index tree DGT for the default graph
         // if an index per named graph NG is enabled, we compute a separate index tree NGT for each NG, otherwise all
         // items will be indexed in the default graph index tree DGT
-        dataset.begin(ReadWrite.READ);
-        Model defaultModel = dataset.getDefaultModel();
+
         if (indexTreePerGraph) {
+            dataset.begin(ReadWrite.READ);
             LOGGER.info("building spatial index for default graph ...");
+            Model defaultModel = dataset.getDefaultModel();
             defaultIndexTree = buildSpatialIndexTree(defaultModel, srsURI);
 
             // Named Models
@@ -410,14 +417,16 @@ public class SpatialIndex {
                 Model namedModel = dataset.getNamedModel(graphName);
                 graphToTree.put(graphName, buildSpatialIndexTree(namedModel, srsURI));
             }
+            dataset.end();
         } else {
+            LOGGER.info("building spatial index for default graph and all named graphs ...");
+            Collection<SpatialIndexItem> spatialIndexItems = findSpatialIndexItems(dataset, srsURI);
             // create the union view of default graph and all named graphs
-            Union unionAllGraph = new Union(dataset.asDatasetGraph().getDefaultGraph(), dataset.asDatasetGraph().getUnionGraph());
+//            Union unionAllGraph = new Union(dataset.asDatasetGraph().getDefaultGraph(), dataset.asDatasetGraph().getUnionGraph());
 
-            defaultIndexTree = buildSpatialIndexTree(ModelFactory.createModelForGraph(unionAllGraph), srsURI);
+            defaultIndexTree = buildSpatialIndexTree(spatialIndexItems);
         }
 
-        dataset.end();
         LOGGER.info("Building Spatial Index - Completed");
         SpatialIndex index = new SpatialIndex(defaultIndexTree, graphToTree, srsURI);
         index.build();
@@ -438,6 +447,7 @@ public class SpatialIndex {
         dataset.begin(ReadWrite.READ);
         Model defaultModel = dataset.getDefaultModel();
         Collection<SpatialIndexItem> items = getSpatialIndexItems(defaultModel, srsURI);
+        LOGGER.info("found {} geospatial features in default graph", items.size());
 
         //Named Models
         Iterator<String> graphNames = dataset.listNames();
@@ -445,6 +455,7 @@ public class SpatialIndex {
             String graphName = graphNames.next();
             Model namedModel = dataset.getNamedModel(graphName);
             Collection<SpatialIndexItem> graphItems = getSpatialIndexItems(namedModel, srsURI);
+            LOGGER.info("found {} geospatial features in graph {}", graphItems.size(), graphName);
             items.addAll(graphItems);
         }
 
