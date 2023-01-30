@@ -422,20 +422,24 @@ public abstract class MatchRDFS<X, T> extends CxtInf<X, T> implements Match<X,T>
 
     private void accTypesDomain(Set<X> types, X X) {
         Stream<T> stream = sourceFind(X, ANY, ANY);
-        stream.forEach(triple -> {
-            X p = predicate(triple);
-            Set<X> x = setup.getDomain(p);
-            types.addAll(x);
-        });
+
+        stream.map(this::predicate)
+                .distinct()
+                .forEach(p -> {
+                    Set<X> x = setup.getDomain(p);
+                    types.addAll(x);
+                });
     }
 
     private void accTypesRange(Set<X> types, X X) {
         Stream<T> stream = sourceFind(ANY, ANY, X);
-        stream.forEach(triple -> {
-            X p = predicate(triple);
-            Set<X> x = setup.getRange(p);
-            types.addAll(x);
-        });
+
+        stream.map(this::predicate)
+                .distinct()
+                .forEach(p -> {
+                    Set<X> x = setup.getRange(p);
+                    types.addAll(x);
+                });
     }
 
     private Set<X> subTypes(Set<X> types) {
