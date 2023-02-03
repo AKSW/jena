@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite",
     "serve": "vite preview",
+    "prebuild": "patch -F0 -ff -p1 < yasqe.lateral.patch",
     "build": "vite build",
     "test:unit": "vitest run --environment jsdom",
     "test:e2e": "cross-env FUSEKI_PORT=\"${FUSEKI_PORT:=3030}\" PORT=\"${PORT:=8080}\" concurrently --names 'SERVER,CLIENT,TESTS' --prefix-colors 'yellow,blue,green' --success 'first' --kill-others 'yarn run serve:fuseki' 'yarn wait-on http://localhost:${FUSEKI_PORT}/$/ping && yarn run dev' 'yarn wait-on http-get://localhost:${PORT}/index.html && cypress run $@'",
