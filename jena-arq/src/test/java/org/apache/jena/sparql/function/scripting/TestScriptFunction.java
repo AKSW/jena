@@ -20,7 +20,9 @@ package org.apache.jena.sparql.function.scripting;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.query.ARQ;
+import org.apache.jena.query.QueryParseException;
 import org.apache.jena.sparql.expr.ExprEvalException;
+import org.apache.jena.sparql.expr.ExprUndefFunction;
 import org.apache.jena.sparql.expr.NodeValue;
 import org.apache.jena.sparql.sse.SSE;
 import org.apache.jena.sparql.util.Context;
@@ -195,15 +197,23 @@ public class TestScriptFunction {
         assertEquals(nv.asNode().getLiteralDatatype(), xsdDatatype);
     }
 
-    @Test(expected=ExprEvalException.class)
+    @Test(expected= ExprUndefFunction.class)
     public void script_err_1() {
         NodeValue nv = eval("no_such_function()");
     }
 
     // Wrong number of argument is OK in JavaScript - "null" return becomes ExprEvalException.
-    @Test(expected=ExprEvalException.class)
+    @Test
     public void script_err_2() {
-        NodeValue nv = eval("identity");
+        Class<? extends Throwable> exception;
+        if (language.equalsIgnoreCase("JS")) {
+            exception = ExprEvalException.class;
+        } else {
+            exception = QueryParseException.class;
+        }
+        assertThrows(exception, () -> {
+            NodeValue nv = eval("identity");
+        });
     }
 
     @Test
