@@ -686,6 +686,23 @@ public class SpatialIndex {
         }
     }
 
+
+    /**
+     * Write spatial index as Kryo serialization to given OutputStream.
+     * @param os output stream
+     * @param index spatial index
+     */
+    public static void writeToOutputStream(OutputStream os, SpatialIndex index) {
+        Kryo kryo = new Kryo();
+        JtsKryoRegistrator.registerClasses(kryo);
+
+        Output output = new Output(os);
+        kryo.writeObject(output, index.srsInfo.getSrsURI());
+        kryo.writeObject(output, index.defaultGraphTree);
+        kryo.writeClassAndObject(output, index.graphToTree);
+        output.close();
+    }
+
     /**
      * Load a SpatialIndex from file.<br>
      * Index will be built and empty if file does not exist or is null.
