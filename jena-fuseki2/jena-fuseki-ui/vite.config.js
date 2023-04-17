@@ -58,18 +58,18 @@ export default defineConfig({
       output: {
         manualChunks: {
           'queryDataset': [
-            '../views/manage/ExistingDatasets.vue',
-            '../views/dataset/Query.vue'
+            'src/views/manage/ExistingDatasets.vue',
+            'src/views/dataset/Query.vue'
           ],
           'manageDataset': [
-            '../views/manage/NewDataset.vue',
-            '../views/dataset/Upload.vue',
-            '../views/dataset/Edit.vue',
-            '../views/dataset/Info.vue'
+            'src/views/manage/NewDataset.vue',
+            'src/views/dataset/Upload.vue',
+            'src/views/dataset/Edit.vue',
+            'src/views/dataset/Info.vue'
           ],
           'other': [
-            '../views/manage/Tasks.vue',
-            '../views/Help.vue'
+            'src/views/manage/Tasks.vue',
+            'src/views/Help.vue'
           ]
         }
       }
