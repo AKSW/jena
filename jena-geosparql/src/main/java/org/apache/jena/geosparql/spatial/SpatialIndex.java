@@ -37,12 +37,14 @@ import org.apache.jena.geosparql.implementation.vocabulary.Geo;
 import org.apache.jena.geosparql.implementation.vocabulary.SRS_URI;
 import org.apache.jena.geosparql.implementation.vocabulary.SpatialExtension;
 import org.apache.jena.geosparql.spatial.serde.JtsKryoRegistrator;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.compose.Union;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.core.NamedGraph;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
@@ -233,6 +235,43 @@ public class SpatialIndex {
                 LOGGER.warn("graph not indexed: " + graph);
             }
             STRtree tree = graphToTree.get(graph);
+            if (tree != null && !tree.isEmpty()) {
+                return new HashSet<>(tree.query(searchEnvelope));
+            } else {
+                return new HashSet<>();
+            }
+        }
+    }
+
+    public HashSet<Node> query(Envelope searchEnvelope, Graph graph) {
+        Node graphNode = null;
+        // check for named graphs
+        if (graph instanceof NamedGraph && ((NamedGraph) graph).getGraphName() != null) {
+            graphNode = ((NamedGraph) graph).getGraphName();
+        }
+
+        // fallback to union graph for all other Graph implementations
+        if (graphNode == null) {
+            LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to union graph.");
+            graphNode = Quad.unionGraph;
+        }
+        LOGGER.debug("spatial index lookup on graph: " + graphNode);
+
+        // handle union graph
+        if (graphNode.equals(Quad.unionGraph)) {
+            LOGGER.warn("spatial index lookup on union graph");
+            HashSet<Node> items = graphToTree.values().stream()
+                    .map(tree -> tree.query(searchEnvelope))
+                    .collect(HashSet::new,
+                            Set::addAll,
+                            Set::addAll);
+            return items;
+        } else {
+            String uri = graphNode.getURI();
+            if (!graphToTree.containsKey(uri)) {
+                LOGGER.warn("graph not indexed: " + graph);
+            }
+            STRtree tree = graphToTree.get(uri);
             if (tree != null && !tree.isEmpty()) {
                 return new HashSet<>(tree.query(searchEnvelope));
             } else {
