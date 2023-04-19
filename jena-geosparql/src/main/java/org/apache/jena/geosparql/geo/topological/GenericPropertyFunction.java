@@ -236,7 +236,7 @@ public abstract class GenericPropertyFunction extends PFuncSimple {
             GeometryWrapper geom = GeometryWrapper.extract(geometryLiteral);
             GeometryWrapper transformedGeom = geom.transform(spatialIndex.getSrsInfo());
             Envelope searchEnvelope = transformedGeom.getEnvelope();
-            HashSet<Node> features = spatialIndex.query(searchEnvelope);
+            HashSet<Node> features = spatialIndex.query(searchEnvelope, graph);
 
             //Check each of the Features that match the search.
             for (Node featureNode : features) {
