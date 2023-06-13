@@ -186,9 +186,18 @@ public abstract class GenericSpatialPropertyFunction extends PFuncSimpleAndList 
         SearchEnvelope searchEnvelope = spatialArguments.searchEnvelope;
         Graph activeGraph = execCxt.getActiveGraph();
 
-        HashSet<Node> features = (activeGraph instanceof NamedGraph && ((NamedGraph) activeGraph).getGraphName() != null)
-                ? searchEnvelope.check(spatialIndex, ((NamedGraph) activeGraph).getGraphName().getURI())
-                : searchEnvelope.check(spatialIndex);
+        HashSet<Node> features;
+        if (!execCxt.getDataset().getContext().get(SpatialIndex.symSpatialIndexPerGraph, false)) {
+            // no index per graph activated, thus, fallback to query the default graph spatial index tree only
+            // which is the default behaviour
+            features = searchEnvelope.check(spatialIndex);
+        } else {
+            // check if context is a named graph, if so use to query only the corresponding spatial index tree
+            // otherwise, query only the default graph spatial index tree
+            features = (activeGraph instanceof NamedGraph && ((NamedGraph) activeGraph).getGraphName() != null)
+                    ? searchEnvelope.check(spatialIndex, ((NamedGraph) activeGraph).getGraphName().getURI())
+                    : searchEnvelope.check(spatialIndex);
+        }
 
         Var subjectVar = Var.alloc(subject.getName());
 
