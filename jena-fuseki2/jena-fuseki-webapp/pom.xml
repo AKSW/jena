@@ -60,6 +60,12 @@
       <artifactId>jena-text</artifactId>
       <version>4.8.0</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-geosparql</artifactId>
+      <version>4.8.0</version>
+    </dependency>
     
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
