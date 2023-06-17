@@ -774,7 +774,9 @@ public class SpatialIndex {
             }
         } else {
             LOGGER.info("File {} does not exist. Creating empty Spatial Index.", (spatialIndexFile != null ? spatialIndexFile.getAbsolutePath() : "null"));
-            return new SpatialIndex();
+            SpatialIndex spatialIndex = new SpatialIndex();
+            spatialIndex.setLocation(spatialIndexFile);
+            return spatialIndex;
         }
     }
 }
