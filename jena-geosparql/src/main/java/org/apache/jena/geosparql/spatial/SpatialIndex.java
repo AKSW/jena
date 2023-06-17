@@ -252,8 +252,10 @@ public class SpatialIndex {
 
         // fallback to union graph for all other Graph implementations
         if (graphNode == null) {
-            LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to union graph.");
-            graphNode = Quad.unionGraph;
+            //LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to union graph.");
+            //graphNode = Quad.unionGraph;
+            LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to default graph.");
+            return query(searchEnvelope);
         }
         LOGGER.debug("spatial index lookup on graph: " + graphNode);
 
