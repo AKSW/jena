@@ -427,6 +427,22 @@ public class G {
         Objects.requireNonNull(graph, "graph");
         Objects.requireNonNull(node, "node");
         GNode gNode = GNode.create(graph, node);
+        if ( ! GraphList.isListNode(gNode) )
+            return null;
+        return GraphList.members(gNode);
+    }
+
+    /**
+     * Return a java list where the {@code node} is an RDF list of nodes or a single
+     * node (returned a singleton list).
+     */
+    public static List<Node> getOneOrList(Graph graph, Node node) {
+        Objects.requireNonNull(graph, "graph");
+        Objects.requireNonNull(node, "node");
+        GNode gNode = GNode.create(graph, node);
+        // An element on its own is a list of one
+        if ( ! GraphList.isListNode(gNode) )
+            return List.of(node);
         return GraphList.members(gNode);
     }
 
@@ -925,7 +941,6 @@ public class G {
 //        Predicate<Triple> predicate = (t) -> sameTermMatch(o, t.getObject()) ;
 //        iter = iter.filterKeep(predicate) ;
 //    }
-
     }
 
     /**
@@ -947,11 +962,14 @@ public class G {
     public static boolean sameTermMatch(Node match, Node data) {
         if ( isNullOrAny(match) )
             return true;
+        if ( ! match.isLiteral() )
+            // Only literals have values
+            return match.equals(data);
 
         // Allow for case-insensitive language tag comparison.
         if ( ! Util.isLangString(data) || ! Util.isLangString(match) )
             // Any mix of node types except both strings with lang tags.
-            return match.equals(data) ;
+            return match.equals(data);
 
         // Both nodes with language tags : compare languages case insensitively.
         String lex1 = match.getLiteralLexicalForm();

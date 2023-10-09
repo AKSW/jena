@@ -18,6 +18,7 @@
 
 package org.apache.jena.fuseki.main;
 
+import org.apache.jena.fuseki.main.sys.TestFusekiModules;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
@@ -46,6 +47,7 @@ import org.junit.runners.Suite.SuiteClasses;
   , TestSPARQLProtocol.class
 
   , TestPatchFuseki.class
+  , TestFusekiCustomScriptFunc.class
 
   // Test ping.
   , TestMetrics.class

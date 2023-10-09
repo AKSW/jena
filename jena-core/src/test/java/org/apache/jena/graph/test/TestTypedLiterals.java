@@ -81,6 +81,7 @@ public class TestTypedLiterals extends TestCase {
     /**
      * Test the base functioning of unknown datatypes
      */
+    @SuppressWarnings("deprecation")
     public void testUnknown() {
         String typeURI = "urn:x-hp-dt:unknown";
         String typeURI2 = "urn:x-hp-dt:unknown2";
@@ -130,6 +131,7 @@ public class TestTypedLiterals extends TestCase {
     /**
      * Tests the base functioning of a user defined datatype
      */
+    @SuppressWarnings("deprecation")
     public void testUserDef() {
         // Register the user defined type for rationals
         RDFDatatype rtype = RationalType.theRationalType;
@@ -472,7 +474,7 @@ public class TestTypedLiterals extends TestCase {
         Node np = NodeFactory.createURI("p") ;
         Node nx1 = NodeFactory.createLiteral("0.50", dt) ;
         Node nx2 = NodeFactory.createLiteral("0.500", dt) ;
-        Graph graph = Factory.createDefaultGraph() ;
+        Graph graph = GraphMemFactory.createDefaultGraph() ;
         graph.add(Triple.create(ns, np, nx1)) ;
         assertTrue( graph.find(Node.ANY, Node.ANY, nx2).hasNext() );
     }

@@ -18,6 +18,9 @@
 
 package org.apache.jena.query;
 
+import java.net.http.HttpClient;
+
+import org.apache.jena.atlas.lib.Version;
 import org.apache.jena.http.sys.HttpRequestModifier;
 import org.apache.jena.http.sys.RegistryRequestModifier;
 import org.apache.jena.riot.RIOT;
@@ -31,17 +34,14 @@ import org.apache.jena.sparql.exec.http.QuerySendMode;
 import org.apache.jena.sparql.expr.aggregate.AggregateRegistry;
 import org.apache.jena.sparql.function.FunctionRegistry;
 import org.apache.jena.sparql.function.scripting.ScriptLangSymbols;
-import org.apache.jena.sparql.mgt.ARQMgt;
 import org.apache.jena.sparql.mgt.Explain;
 import org.apache.jena.sparql.mgt.Explain.InfoLevel;
-import org.apache.jena.sparql.mgt.SystemInfo;
 import org.apache.jena.sparql.pfunction.PropertyFunctionRegistry;
 import org.apache.jena.sparql.service.ServiceExecutorRegistry;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.MappingRegistry;
 import org.apache.jena.sparql.util.Symbol;
 import org.apache.jena.sys.JenaSystem;
-import org.apache.jena.util.Metadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -271,6 +271,20 @@ public class ARQ
      */
     public static final Symbol httpRequestModifer = SystemARQ.allocSymbol("httpRequestModifer");
 
+    // ---- SERVICE
+    /**
+     * Global on/off for all SERVICE calls.
+     * <p>
+     * Set {@code false} to disable SERVICE calls
+     * regardless of any context or default setting.
+     */
+    public static boolean globalServiceAllowed = true;
+
+    /**
+     * Default for whether SERVICE is enabled when no context setting {@link ARQ#httpServiceAllowed} is found.
+     */
+    public static boolean allowServiceDefault = true;
+
     /**
      * Control whether SERVICE processing is allowed.
      * If the context of the query execution contains this,
@@ -279,10 +293,24 @@ public class ARQ
     public static final Symbol httpServiceAllowed = SystemARQ.allocSymbol("httpServiceAllowed");
 
     //public static final Symbol httpQueryCompression  = SystemARQ.allocSymbol("httpQueryCompression");
+
+    /** {@link HttpClient} to use. */
     public static final Symbol httpQueryClient       = SystemARQ.allocSymbol("httpQueryClient");
+    /**
+     * Context to use to set up the SERVICE call.
+     * @deprecated This no longer does anything. The context comes from the query
+     *     execution settings or the dataset settings.
+     */
+    @Deprecated(since="4.9.0")
     public static final Symbol httpServiceContext    = SystemARQ.allocSymbol("httpServiceContext");
-    // Not connection timeout which is now in HttpClient
+
+    /**
+     * Operation timeout.
+     * Connection timeout is controlled via {@link java.net.http.HttpClient}.
+     */
     public static final Symbol httpQueryTimeout      = SystemARQ.allocSymbol("httpQueryTimeout");
+
+    // ----
 
     /**
      * If set to true, the parsers will convert undefined prefixes to a URI
@@ -529,6 +557,11 @@ public class ARQ
     public static final String systemPropertyScripting = "jena:scripting";
 
     /**
+     * Context symbol for the script function allow list
+     */
+    public static final Symbol symCustomFunctionScriptAllowList = ScriptLangSymbols.scriptAllowList;
+
+    /**
      * Context symbol for JavaScript functions as a string value which is evaluated.
      * {@code arq:js-functions}.
      */
@@ -599,21 +632,11 @@ public class ARQ
 
     // ----------------------------------
 
-    /** The root package name for ARQ */
-    public static final String PATH         = "org.apache.jena.arq";
-
-    static private String metadataLocation  = "org/apache/jena/arq/arq-properties.xml";
-
-    static private Metadata metadata        = new Metadata(metadataLocation);
-
     /** The product name */
-    public static final String NAME         = "ARQ";
+    public static final String NAME         = "Apache Jena ARQ";
 
-    /** The full name of the current ARQ version */
-    public static final String VERSION      = metadata.get(PATH+".version", "unknown");
-
-    /** The date and time at which this release was built */
-    public static final String BUILD_DATE   = metadata.get(PATH+".build.datetime", "unset");
+    /** The ARQ version */
+    public static final String VERSION      = Version.versionForClass(ARQ.class).orElse("<development>");
 
     /**
      * Ensure things have started - applications do not need call this.
@@ -636,12 +659,8 @@ public class ARQ
             ResultSetLang.init();
             // Done as a class init.
             //globalContext = defaultSettings();
-            ARQMgt.init();         // After context and after PATH/NAME/VERSION/BUILD_DATE are set
             MappingRegistry.addPrefixMapping(ARQ.arqSymbolPrefix, ARQ.arqParamNS);
 
-            // This is the pattern for any subsystem to register.
-            SystemInfo sysInfo = new SystemInfo(ARQ.arqIRI, ARQ.PATH, ARQ.VERSION, ARQ.BUILD_DATE);
-            SystemARQ.registerSubSystem(sysInfo);
             AssemblerUtils.init();
             // Register RIOT details here, not earlier, to avoid
             // initialization loops with RIOT.init() called directly.

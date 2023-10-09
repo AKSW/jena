@@ -18,17 +18,14 @@
 
 package org.apache.jena.graph;
 
-import org.apache.jena.graph.impl.GraphBase ;
 import org.apache.jena.mem.GraphMem ;
-import org.apache.jena.util.iterator.ExtendedIterator ;
-import org.apache.jena.util.iterator.NullIterator ;
 
 /**
     A factory class for creating Graphs.
-
+   @deprecated Use GraphMemFactory
 */
 
-@SuppressWarnings("deprecation")
+@Deprecated
 public class Factory
     {
     private Factory()
@@ -38,10 +35,10 @@ public class Factory
         Answer a memory-based Graph.
     */
     public static Graph createDefaultGraph()
-        { return Factory.createGraphMem( ); }
+        { return GraphMemFactory.createGraphMem( ); }
 
     public static Graph createGraphMem()
-        { return new GraphMem(); }
+        { return GraphMemFactory.createGraphMem( ); }
 
     /** @deprecated To be removed */
     @Deprecated
@@ -56,14 +53,7 @@ public class Factory
         return g;
         }
 
-    private final static Graph emptyGraph = new GraphBase() {
-        @Override
-        protected ExtendedIterator<Triple> graphBaseFind(Triple triplePattern) {
-            return NullIterator.instance() ;
-        }
-    } ;
-
     /** Immutable graph with no triples */
-    public static Graph empty() { return emptyGraph ; }
+    public static Graph empty() { return GraphMemFactory.empty() ; }
 
     }

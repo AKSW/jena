@@ -19,9 +19,7 @@
 package org.apache.jena.atlas.lib;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List ;
-import java.util.Objects;
-import java.util.Set ;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.zip.Adler32 ;
 import java.util.zip.CRC32 ;
@@ -33,6 +31,27 @@ import org.apache.jena.atlas.logging.Log ;
 public class Lib
 {
     private Lib() {}
+
+    /**
+     * Concatenate two "/" delimited path names.
+     * <ul>
+     * <li>If path (second argument) starts with "/", it is assumed to be absolute and path is returned.</li>
+     * <li>If path (second argument) is "", return the directory.</li>
+     * <li>Otherwise the arguments are concatenated ensuring there is a "/" between them.</li>
+     * </ul>
+     */
+    public static String concatPaths(String directory, String path) {
+        Objects.requireNonNull(directory);
+        Objects.requireNonNull(path);
+        if ( path.startsWith("/") )
+            return path;
+        if ( path.isEmpty())
+            return directory;
+        if ( directory.endsWith("/") )
+            return directory+path;
+        else
+            return directory+"/"+path;
+    }
 
     /** Stream to {@link List} */
     public static <X> List<X> toList(Stream<X> stream) {
@@ -208,5 +227,32 @@ public class Lib
             chars[start + 2 * idx + 1] = chLo;
         }
     }
+
+    // Powerset (returned as a list).
+    // Calculate 2^N then loop i on 0 to 2^n-1
+    //     create the set for this entry.
+    //     for the j-th element of the input
+    //        include the element if the j-th bit is set in i.
+    // See also Guava.Sets.powerSet
+    /** PowerSet */
+    public static <X> Set<Set<X>> powerSet(Set<X> elts) {
+        List<X> list = new ArrayList<>(elts);
+        int size = list.size();
+        long N = (long) Math.pow(2, list.size());
+        Set<Set<X>> output = new HashSet<>();
+        for (int i = 0; i < N; i++) {
+            // This elements.
+            Set<X> elt = new HashSet<>();
+            // for every bit in N
+            for (int j = 0; j < size; j++) {
+                int x = (1<<j);
+                if ( (x & i) != 0 )
+                    elt.add(list.get(j));
+            }
+            output.add(elt);
+        }
+        return output;
+    }
+
 
 }
