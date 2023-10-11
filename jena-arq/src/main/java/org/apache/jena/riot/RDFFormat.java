@@ -33,6 +33,8 @@ public class RDFFormat {
     public static final RDFFormatVariant BLOCKS         = new RDFFormatVariant("blocks") ;
     /** Print out one per line */
     public static final RDFFormatVariant FLAT           = new RDFFormatVariant("flat") ;
+    /** Print with fixed indentation width and linebreaks after each sequence element */
+    public static final RDFFormatVariant LONG           = new RDFFormatVariant("long") ;
 
     /** Use ASCII output (N-triples, N-Quads) */
     public static final RDFFormatVariant ASCII          = new RDFFormatVariant("ascii") ;
@@ -51,6 +53,8 @@ public class RDFFormat {
     public static final RDFFormat        TURTLE_BLOCKS  = new RDFFormat(Lang.TURTLE, BLOCKS) ;
     /** Turtle - one line per triple  */
     public static final RDFFormat        TURTLE_FLAT    = new RDFFormat(Lang.TURTLE, FLAT) ;
+    /** Turtle - with fixed indentation width and linebreaks after each sequence element */
+    public static final RDFFormat        TURTLE_LONG    = new RDFFormat(Lang.TURTLE, LONG) ;
 
     /** N-Triples in UTF-8 */
     public static final RDFFormat        NTRIPLES_UTF8  = new RDFFormat(Lang.NTRIPLES, UTF8) ;
@@ -78,6 +82,8 @@ public class RDFFormat {
     public static final RDFFormat        TRIG_BLOCKS    = new RDFFormat(Lang.TRIG, BLOCKS) ;
     /** TriG - one line per triple  */
     public static final RDFFormat        TRIG_FLAT      = new RDFFormat(Lang.TRIG, FLAT) ;
+    /** TriG - with fixed indentation width and linebreaks after each sequence element */
+    public static final RDFFormat        TRIG_LONG      = new RDFFormat(Lang.TRIG, LONG) ;
 
     /** SHACL Compact Syntax */
     public static final RDFFormat        SHACLC         = new RDFFormat(Lang.SHACLC);
@@ -141,13 +147,29 @@ public class RDFFormat {
     private static final RDFFormatVariant FRAME_PRETTY       = new JSONLDVariant("frame pretty", true, JSONLDVariant.JSONLD_FORMAT.FRAME) ;
     private static final RDFFormatVariant FRAME_FLAT         = new JSONLDVariant("frame flat", false, JSONLDVariant.JSONLD_FORMAT.FRAME) ;
 
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_EXPAND_PRETTY   = new RDFFormat(Lang.JSONLD10, EXPAND_PRETTY) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_EXPAND_FLAT     = new RDFFormat(Lang.JSONLD10, EXPAND_FLAT) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_COMPACT_PRETTY  = new RDFFormat(Lang.JSONLD10, COMPACT_PRETTY) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_COMPACT_FLAT    = new RDFFormat(Lang.JSONLD10, COMPACT_FLAT) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_FLATTEN_PRETTY  = new RDFFormat(Lang.JSONLD10, FLATTEN_PRETTY) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_FLATTEN_FLAT    = new RDFFormat(Lang.JSONLD10, FLATTEN_FLAT) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_FRAME_PRETTY    = new RDFFormat(Lang.JSONLD10, FRAME_PRETTY) ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_FRAME_FLAT      = new RDFFormat(Lang.JSONLD10, FRAME_FLAT) ;
 
     /** Use {@link #JSONLD10_EXPAND_PRETTY} */
@@ -182,8 +204,14 @@ public class RDFFormat {
     @Deprecated
     public static final RDFFormat        JSONLD_FRAME_FLAT      = JSONLD10_FRAME_FLAT;
 
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10        = JSONLD10_COMPACT_PRETTY ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_PRETTY = JSONLD10_COMPACT_PRETTY ;
+    /** @deprecated Use JSON-LD 1.1 */
+    @Deprecated
     public static final RDFFormat        JSONLD10_FLAT   = JSONLD10_COMPACT_FLAT ;
 
     // JSON-LD 1.0

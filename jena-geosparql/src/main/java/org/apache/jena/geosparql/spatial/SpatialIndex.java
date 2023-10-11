@@ -252,8 +252,10 @@ public class SpatialIndex {
 
         // fallback to union graph for all other Graph implementations
         if (graphNode == null) {
-            LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to union graph.");
-            graphNode = Quad.unionGraph;
+            //LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to union graph.");
+            //graphNode = Quad.unionGraph;
+            LOGGER.warn("Geospatial lookup of unsupported graph type. Fallback to default graph.");
+            return query(searchEnvelope);
         }
         LOGGER.debug("spatial index lookup on graph: " + graphNode);
 
@@ -772,7 +774,9 @@ public class SpatialIndex {
             }
         } else {
             LOGGER.info("File {} does not exist. Creating empty Spatial Index.", (spatialIndexFile != null ? spatialIndexFile.getAbsolutePath() : "null"));
-            return new SpatialIndex();
+            SpatialIndex spatialIndex = new SpatialIndex();
+            spatialIndex.setLocation(spatialIndexFile);
+            return spatialIndex;
         }
     }
 }

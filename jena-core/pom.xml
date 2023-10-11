@@ -25,7 +25,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>4.8.0</version>
+    <version>4.9.0</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -41,37 +41,42 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.8.0</version>
+      <version>4.9.0</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
-      <version>4.8.0</version>
+      <version>4.9.0</version>
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.jena</groupId>
-      <artifactId>jena-iri</artifactId>
-      <version>4.8.0</version>
+        <groupId>org.apache.jena</groupId>
+        <artifactId>jena-iri</artifactId>
+        <version>4.9.0</version>
     </dependency>
 
-    <dependency>
-       <artifactId>commons-cli</artifactId>
-       <groupId>commons-cli</groupId>
-     </dependency>
+      <dependency>
+          <artifactId>commons-cli</artifactId>
+          <groupId>commons-cli</groupId>
+      </dependency>
 
-     <dependency>
-       <groupId>junit</groupId>
-       <artifactId>junit</artifactId>
-       <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.xenei</groupId>
-      <artifactId>junit-contracts</artifactId>
+      <dependency>
+          <groupId>org.roaringbitmap</groupId>
+          <artifactId>RoaringBitmap</artifactId>
+      </dependency>
+
+      <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <scope>test</scope>
+      </dependency>
+
+      <dependency>
+          <groupId>org.xenei</groupId>
+          <artifactId>junit-contracts</artifactId>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -125,14 +130,6 @@
       <resource>
         <filtering>false</filtering>
         <directory>src/main/resources</directory>
-      </resource>
-
-      <resource>
-        <directory>src/main/resources</directory>
-        <includes>
-          <include>org/apache/jena/jena-properties.xml</include>
-        </includes>
-        <filtering>true</filtering>
       </resource>
 
     </resources>

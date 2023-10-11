@@ -33,12 +33,12 @@ public class TestNV {
     @Test public void nv_2() { test("true"); }
     @Test public void nv_3() { test("123"); }
     @Test public void nv_4() { test("123.5e0"); }
-    
+
     // No conversion to JS - becomes an NV.
     @Test public void nv_5() { test("'2018-01-06T17:56:41.293+00:00'^^xsd:dateTime"); }
     @Test public void nv_6() { test("<http://jena.apache.org/>"); }
     @Test public void nv_7() { test("_:abc123"); }
-    
+
     @Test public void nv_10() {
         NodeValue nodeValue = nv("'abc'");
         NV nv = new NV(nodeValue);
@@ -78,6 +78,6 @@ public class TestNV {
     }
 
     private static NodeValue nv(String str) {
-        return NodeValue.makeNode(SSE.parseNode(str)); 
+        return NodeValue.makeNode(SSE.parseNode(str));
     }
 }

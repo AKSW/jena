@@ -69,8 +69,7 @@ public class StreamRDFOps {
 
     /** Send a dataset to a StreamRDF as prefixes, triples and quads */
     public static void sendDatasetToStream(DatasetGraph datasetGraph, StreamRDF stream) {
-        PrefixMap prefixMap = PrefixMapFactory.create(datasetGraph.getDefaultGraph().getPrefixMapping()) ;
-        sendDatasetToStream(datasetGraph, stream, null, prefixMap) ;
+        sendDatasetToStream(datasetGraph, stream, null, datasetGraph.prefixes()) ;
     }
 
     /** Send a dataset to a StreamRDF as triples and quads, using the explicitly given prefix map */
@@ -116,11 +115,7 @@ public class StreamRDFOps {
     /** Set triples to a StreamRDF - does not call .start/.finish */
     public static void sendTriplesToStream(Iterator<Triple> iter, StreamRDF dest)
     {
-        for ( ; iter.hasNext() ; )
-        {
-            Triple t = iter.next() ;
-            dest.triple(t) ;
-        }
+        iter.forEachRemaining(dest::triple);
     }
 
     /** Send quads of a dataset (including default graph as quads) to a StreamRDF, without prefixes */
@@ -132,10 +127,6 @@ public class StreamRDFOps {
     /** Set quads to a StreamRDF - does not call .start/.finish */
     public static void sendQuadsToStream(Iterator<Quad> iter, StreamRDF dest)
     {
-        for ( ; iter.hasNext() ; )
-        {
-            Quad q = iter.next() ;
-            dest.quad(q) ;
-        }
+        iter.forEachRemaining(dest::quad);
     }
 }
