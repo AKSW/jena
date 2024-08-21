@@ -206,14 +206,6 @@ public interface Statement extends FrontsTriple
     /** Return the object of the statement.
      *
      * <p>An exception will be thrown if the object is not a Resource.</p>
-     * @return The object of the statement.
-     *
-     */
-    @Deprecated public Resource getResource(ResourceF f) ;
-
-    /** Return the object of the statement.
-     *
-     * <p>An exception will be thrown if the object is not a Resource.</p>
      *
      * @return The object of the statement interpreted as a value of
      * the specified type.
@@ -251,15 +243,6 @@ public interface Statement extends FrontsTriple
      * @return the language of the object of the statement
      */
     public String getLanguage();
-
-    /**
-        Answer true iff the Literal object of this statement is well-formed XML
-        (ie equivalent to getLiteral().isWellFormedXML()). If the object is not
-        a Literal, throw an exception.
-        @deprecated To be removed.
-     */
-    @Deprecated
-    public boolean hasWellFormedXML();
 
     /**
          Remove this statement (s, p, x) from the model that contains it. Create a
@@ -314,18 +297,6 @@ public interface Statement extends FrontsTriple
 
     /** change the object of the statement (S, P, X) to (S, P, o).
      *  <p>The statement with the old value is removed from the model and
-     *  a new statement with the new value added and returned.</p>
-     * @param o The value to be set.
-     * @param wellFormed true if o is well formed XML
-     *
-     * @return the new (S, P, o) statement.
-     * @deprecated To be removed: Argument 'wellFormed is ignored
-     */
-    @Deprecated
-    public Statement changeObject(String o, boolean wellFormed) ;
-
-    /** change the object of the statement (S, P, X) to (S, P, o).
-     *  <p>The statement with the old value is removed from the model and
      *  a new statement with the new value added.</p>
      * @param o The value to be set.
      * @param l the language of the String
@@ -333,19 +304,6 @@ public interface Statement extends FrontsTriple
      * @return the new (S, P, o) statement..
      */
     public Statement changeObject(String o, String l) ;
-
-    /** change the object of the statement (S, P, X) to (S, P, o).
-     *  <p>The statement with the old value is removed from the model and
-     *  a new statement with the new value added.</p>
-     * @param o The value to be set.
-     * @param l the language of the String
-     *
-     * @return the new (S, P, o) statement.
-     * @deprecated To be removed: Argument 'wellFormed is ignored
-     */
-    @Deprecated
-    public Statement changeObject(String o, String l, boolean wellFormed)
-      ;
 
     /** change the object of the statement (S, P, X) to (S, P, o).
      *  <p>The statement with the old value is removed from the model and
@@ -366,39 +324,7 @@ public interface Statement extends FrontsTriple
     public Statement remove() ;
 
     /**
-        Determine if this statement is the subject of any statements its associated
-        model.
-        @return true iff this statement is the subject of a statement in the model.
-    */
-    boolean isReified();
-
-    /**
-        answer a ReifiedStatement object that embodies this Statement and
-        is in the same Model (if any).
-    */
-    ReifiedStatement createReifiedStatement();
-
-    /**
-        answer a ReifiedStatement object that embodies this Statement, has
-        the same Model, and has the given <code>uri</code>.
-    */
-    ReifiedStatement createReifiedStatement( String uri );
-
-    /**
-        answer an iterator which delivers all the reified statements in the model
-        this Statement belongs to that match this Statement.
-    */
-    RSIterator listReifiedStatements();
-
-    /**
         get the Model this Statement was created in.
     */
     Model getModel();
-
-    /**
-     * Finds all possible resources which are
-     * the reification of this statement, and for each
-     * removes all four triples of the reification quad.
-     */
-    void removeReification();
 }

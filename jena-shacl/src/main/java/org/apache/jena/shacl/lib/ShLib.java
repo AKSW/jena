@@ -33,8 +33,6 @@ import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.impl.Util;
-import org.apache.jena.riot.other.G;
-import org.apache.jena.riot.other.RDFDataException;
 import org.apache.jena.riot.out.NodeFormatter;
 import org.apache.jena.riot.out.NodeFormatterTTL;
 import org.apache.jena.riot.system.PrefixMap;
@@ -50,6 +48,8 @@ import org.apache.jena.sparql.core.DatasetGraphFactory;
 import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.engine.binding.Binding;
 import org.apache.jena.sparql.path.Path;
+import org.apache.jena.system.G;
+import org.apache.jena.system.RDFDataException;
 import org.apache.jena.vocabulary.OWL;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -124,7 +124,9 @@ public class ShLib {
     }
 
     public static void printReport(OutputStream output , ValidationReport report) {
-        PrintStream out = output instanceof PrintStream ? (PrintStream)output : new PrintStream(output);
+        PrintStream out = (output instanceof PrintStream pStream)
+                ? pStream
+                : new PrintStream(output);
         if ( report.conforms() ) {
             out.println("Conforms");
             out.flush();

@@ -559,10 +559,10 @@ public class TextIndexLucene implements TextIndex {
                         TypeMapper tmap = TypeMapper.getInstance();
                         literal = NodeFactory.createLiteral(lexical, tmap.getSafeTypeByName(datatype));
                     } else {
-                        literal = NodeFactory.createLiteral(lexical, doclang);
+                        literal = NodeFactory.createLiteralLang(lexical, doclang);
                     }
                 } else {
-                    literal = NodeFactory.createLiteral(lexical);
+                    literal = NodeFactory.createLiteralString(lexical);
                 }
             }
 
@@ -666,7 +666,7 @@ public class TextIndexLucene implements TextIndex {
                 TextFragment[] frags = highlighter.getBestTextFragments(tokenStream, lexical, opts.joinFrags, opts.maxFrags);
                 String rez = frags2string(frags, opts);
                 log.trace("result: {}, #frags: {}", rez, frags.length) ;
-                literal = NodeFactory.createLiteral(rez, docLang);
+                literal = NodeFactory.createLiteralLang(rez, docLang);
             }
 
             String graf = docDef.getGraphField() != null ? doc.get(docDef.getGraphField()) : null ;
@@ -694,17 +694,18 @@ public class TextIndexLucene implements TextIndex {
 
     private String composeQField(String qs, String textField, String lang, boolean usingSearchFor, List<String> searchForTags) {
         String textClause = "";
+        String fieldGroupingQueryString = "(" + qs + ")";
 
         if (usingSearchFor) {
             for (String tag : searchForTags) {
                 String tf = textField + "_" + tag;
-                textClause += tf + ":" + qs + " ";
+                textClause += tf + ": " + fieldGroupingQueryString + " ";
             }
         } else {
             if (this.isMultilingual && StringUtils.isNotEmpty(lang) && !lang.equals("none")) {
                 textField += "_" + lang;
             }
-            textClause = textField + ":" + qs + " ";
+            textClause = textField + ": " + fieldGroupingQueryString + " ";
         }
 
         return textClause;
@@ -721,6 +722,10 @@ public class TextIndexLucene implements TextIndex {
         // UNLESS lang is not present in the original PF call
         List<String> searchForTags = Util.getSearchForTags(lang);
         boolean usingSearchFor = Util.usingSearchFor(lang);
+
+        // The set will reduce lucene text field expressions
+        // to unique expressions
+        Set<String> uniquePropListQueryStrings = new LinkedHashSet<>();
 
         if (props.isEmpty()) {
             // we got here via
@@ -745,8 +750,9 @@ public class TextIndexLucene implements TextIndex {
 
         log.trace("query$ PROCESSING LIST of properties: {}; Lucene queryString: {}; textFields: {} ", props, qString, textFields) ;
         for (String textField : textFields) {
-            qString += composeQField(qs, textField, lang, usingSearchFor, searchForTags);
+            uniquePropListQueryStrings.add(composeQField(qs, textField, lang, usingSearchFor, searchForTags));
         }
+        qString += String.join("", uniquePropListQueryStrings);
 
         // we need to check whether there was a lang arg either on the query string
         // or explicitly as an input arg and add it to the qString; otherwise, Lucene

@@ -20,11 +20,15 @@
 ///////////////
 package org.apache.jena.ontology;
 
+import java.util.Objects;
+
 // Imports
 ///////////////
 
 import org.apache.jena.assembler.* ;
 import org.apache.jena.ontology.impl.OntModelImpl ;
+import org.apache.jena.ontology.models.ModelGetter;
+import org.apache.jena.ontology.models.ModelMaker;
 import org.apache.jena.rdf.model.* ;
 import org.apache.jena.reasoner.Reasoner ;
 import org.apache.jena.reasoner.ReasonerFactory ;
@@ -208,9 +212,18 @@ public class OntModelSpec {
               spec.getReasonerFactory(), spec.getLanguage() );
     }
 
+
+    // Original .equals
     @Override
     public boolean equals( Object other )
+    // Original .equals
         { return other instanceof OntModelSpec && same( (OntModelSpec) other );}
+
+    @Override
+    public int hashCode() {
+        // Align to .original .equals.
+        return Objects.hash(getLanguage(), getReasonerFactory(), getDocumentManager(), getImportModelGetter()) ;
+    }
 
     private boolean same( OntModelSpec other )
         {

@@ -221,6 +221,7 @@ public class UpdateAction
     }
 
     // All non-streaming updates come through here.
+    @SuppressWarnings("deprecation")
     private static void execute$(UpdateRequest request, DatasetGraph datasetGraph, Binding inputBinding)
     {
         UpdateExec uProc = UpdateExec.newBuilder().update(request).dataset(datasetGraph).initialBinding(inputBinding).build();
@@ -409,7 +410,7 @@ public class UpdateAction
     public static void parseExecute(UsingList usingList, DatasetGraph dataset, InputStream input, Binding inputBinding, String baseURI, Syntax syntax)
     {
         @SuppressWarnings("deprecation")
-        UpdateProcessorStreaming uProc = UpdateExecutionFactory.createStreaming(dataset, inputBinding) ;
+        UpdateProcessorStreaming uProc = UpdateStreaming.createStreaming(dataset, inputBinding) ;
         if (uProc == null)
             throw new ARQException("No suitable update procesors are registered/able to execute your updates");
 

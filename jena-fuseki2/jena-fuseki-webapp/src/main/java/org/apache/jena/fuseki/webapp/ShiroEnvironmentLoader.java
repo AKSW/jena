@@ -21,14 +21,13 @@ package org.apache.jena.fuseki.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.irix.IRIs;
-import org.apache.shiro.config.ConfigurationException;
-import org.apache.shiro.io.ResourceUtils;
+import org.apache.shiro.lang.io.ResourceUtils;
 import org.apache.shiro.web.env.EnvironmentLoader;
 import org.apache.shiro.web.env.ResourceBasedWebEnvironment;
 import org.apache.shiro.web.env.WebEnvironment;
@@ -50,7 +49,7 @@ public class ShiroEnvironmentLoader extends EnvironmentLoader implements Servlet
         try {
             // Shiro.
             initEnvironment(servletContext);
-        } catch (ConfigurationException  ex) {
+        } catch (Exception ex) {
             Fuseki.configLog.error("Shiro initialization failed: "+ex.getMessage());
             // Exit?
             throw ex;
@@ -73,8 +72,7 @@ public class ShiroEnvironmentLoader extends EnvironmentLoader implements Servlet
      */
     @Override
     protected void customizeEnvironment(WebEnvironment environment) {
-        if ( environment instanceof ResourceBasedWebEnvironment ) {
-            ResourceBasedWebEnvironment env = (ResourceBasedWebEnvironment)environment;
+        if ( environment instanceof ResourceBasedWebEnvironment env ) {
             String[] locations = env.getConfigLocations();
             String loc = huntForShiroIni(locations);
             Fuseki.configLog.info("Shiro file: "+loc);

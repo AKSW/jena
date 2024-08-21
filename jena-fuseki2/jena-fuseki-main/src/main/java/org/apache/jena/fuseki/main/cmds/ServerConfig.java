@@ -52,6 +52,7 @@ class ServerConfig {
     public FusekiModules fusekiModules  = null;
 
     public boolean withCORS             = true;
+    public String corsConfigFile        = null;
     public boolean withPing             = false;
     public boolean withStats            = false;
     public boolean withMetrics          = false;
@@ -73,6 +74,7 @@ class ServerConfig {
     public boolean validators           = false;
     /** An informative label */
     public String datasetDescription    = null;
+    public String servletContextPath    = null;
     public String contentDirectory      = null;
 
     // Server authentication

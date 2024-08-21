@@ -28,11 +28,11 @@ import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.reasoner.InfGraph;
-import org.apache.jena.riot.other.G;
 import org.apache.jena.riot.system.PrefixMap;
 import org.apache.jena.riot.system.Prefixes;
 import org.apache.jena.sparql.graph.GraphOps;
 import org.apache.jena.sparql.graph.GraphZero;
+import org.apache.jena.system.G;
 
 /**
  * DatasetGraph of a single graph as default graph.
@@ -49,6 +49,10 @@ public class DatasetGraphOne extends DatasetGraphBaseFind {
     private final DatasetGraph backingDGS;
     private final Transactional txn;
     private final boolean supportsAbort;
+
+    public static DatasetGraph createRaw(Graph graph) {
+        return new DatasetGraphOne(graph);
+    }
 
     public static DatasetGraph create(Graph graph) {
         // Find the deepest graph, the one that may be attached to a DatasetGraph.
@@ -178,11 +182,6 @@ public class DatasetGraphOne extends DatasetGraphBaseFind {
             graph.delete(quad.asTriple());
         else
             unsupportedMethod(this, "delete(named graph)");
-    }
-
-    @Override
-    public void setDefaultGraph(Graph g) {
-        unsupportedMethod(this, "setDefaultGraph");
     }
 
     @Override

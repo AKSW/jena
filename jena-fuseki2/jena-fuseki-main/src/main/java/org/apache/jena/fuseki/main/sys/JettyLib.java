@@ -18,13 +18,17 @@
 
 package org.apache.jena.fuseki.main.sys;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.jena.riot.WebContent;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.HandlerList;
-import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.util.resource.Resource;
+import org.eclipse.jetty.util.resource.ResourceFactory;
 
 /** Helpers for working with Jetty.
  * <h3>SecurityHandler</h3>
@@ -41,21 +45,20 @@ public class JettyLib {
         if (currentHandler == null) {
             server.setHandler(handler);
         } else {
-            if (currentHandler instanceof HandlerList) {
-                ((HandlerList) currentHandler).addHandler(handler);
-            } else {
-                // Singleton handler. Convert to list.
-                final HandlerList handlerList = new HandlerList();
-                handlerList.addHandler(currentHandler);
-                handlerList.addHandler(handler);
-                server.setHandler(handlerList);
-            }
+            List<Handler> handlerList = new ArrayList<>();
+
+            if (currentHandler instanceof Handler.Container hContainer)
+                handlerList.addAll(hContainer.getHandlers());
+            handlerList.add(handler);
+            Handler.Container container = new Handler.Sequence(handlerList);
+            server.setHandler(container);
         }
     }
 
     /** Add the RDF MIME Type mappings */
     public static void setMimeTypes(ServletContextHandler context) {
-        MimeTypes mimeTypes = new MimeTypes();
+        MimeTypes.Mutable mimeTypes = context.getMimeTypes(); //new MimeTypes.Mutable();
+
         // RDF syntax
         mimeTypes.addMimeMapping("nt",      WebContent.contentTypeNTriples);
         mimeTypes.addMimeMapping("nq",      WebContent.contentTypeNQuads);
@@ -81,7 +84,6 @@ public class JettyLib {
         mimeTypes.addMimeMapping("txt",     WebContent.contentTypeTextPlain);
         mimeTypes.addMimeMapping("csv",     WebContent.contentTypeTextCSV);
         mimeTypes.addMimeMapping("tsv",     WebContent.contentTypeTextTSV);
-        context.setMimeTypes(mimeTypes);
     }
 
     /** HTTP configuration with setting for Fuseki workload. No "secure" settings. */
@@ -93,5 +95,10 @@ public class JettyLib {
 //      http_config.setResponseHeaderSize(8192);
         http_config.setSendServerVersion(false);
         return http_config;
+    }
+
+    /** Create a resource for a filename */
+    public static Resource newResource(String filename) {
+        return ResourceFactory.root().newResource(filename);
     }
 }

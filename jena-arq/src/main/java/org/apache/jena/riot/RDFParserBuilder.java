@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.apache.jena.atlas.lib.IRILib;
-import org.apache.jena.graph.BlankNodeId;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.http.HttpEnv;
 import org.apache.jena.irix.IRIs;
@@ -265,12 +264,6 @@ public class RDFParserBuilder {
         return this;
     }
 
-    /** @deprecated Use {@link #acceptHeader} */
-    @Deprecated
-    public RDFParserBuilder httpAccept(String acceptHeader) {
-        return acceptHeader(acceptHeader);
-    }
-
     /**
      * Set an HTTP header. Any previous setting is lost.
      * <p>
@@ -327,30 +320,6 @@ public class RDFParserBuilder {
 
     /**
      * Convert the lexical form of literals to a canonical form.
-     * @deprecated Use {@link #canonicalValues} and one of {@link #langTagCanonical} and {@link #langTagLowerCase}
-     * <p>
-     * This operation is equivalent to
-     * <pre>
-     *   this.canonicalValues(flag);
-     *    if ( flag )
-     *        this.langTagCanonical();
-     *    else
-     *        this.langTagAsGiven();
-     *    return this;
-     * </pre>
-     */
-    @Deprecated
-    public RDFParserBuilder canonicalLiterals(boolean flag) {
-        this.canonicalValues(flag);
-        if ( flag )
-            this.langTagCanonical();
-        else
-            this.langTagAsGiven();
-        return this;
-    }
-
-    /**
-     * Convert the lexical form of literals to a canonical form.
      * <p>
      * Two literals can be different RDF terms for the same value.
      * <p>
@@ -400,7 +369,9 @@ public class RDFParserBuilder {
      * This option can slow parsing down.
      *
      * @see #langTagCanonical
+     * @deprecated In Jena5, language tags are always converted to RFC 5646 case format.
      */
+    @Deprecated
     public RDFParserBuilder langTagLowerCase() {
         return langTagForm(LangTagForm.LOWER_CASE);
     }
@@ -419,7 +390,9 @@ public class RDFParserBuilder {
      * This option can slow parsing down.
      * </p>
      * @see #langTagLowerCase
+     * @deprecated In Jena5, language tags are always converted to RFC 5646 case format.
      */
+    @Deprecated
     public RDFParserBuilder langTagCanonical() {
         return langTagForm(LangTagForm.CANONICAL);
     }
@@ -429,13 +402,17 @@ public class RDFParserBuilder {
      * This is the default behaviour of parsing.
      * @see #langTagLowerCase
      * @see #langTagCanonical
+     * @deprecated In Jena5, language tags are always converted to RFC 5646 case format.
      */
+    @Deprecated
     public RDFParserBuilder langTagAsGiven() {
         return langTagForm(LangTagForm.NONE);
     }
 
     private RDFParserBuilder langTagForm(LangTagForm form) {
-        this.langTagForm = form;
+        // Ignore!
+        // language tags are always converted to RFC 5646 case format.
+        //this.langTagForm = form;
         return this;
     }
 
@@ -475,7 +452,7 @@ public class RDFParserBuilder {
      * reuse.
      * <br/>
      * The {@code FactoryRDF} also determines how blank node labels in RDF syntax are
-     * mapped to {@link BlankNodeId}. Use
+     * mapped to blank node objects.
      * <pre>
      *    new Factory(myLabelToNode)
      * </pre>

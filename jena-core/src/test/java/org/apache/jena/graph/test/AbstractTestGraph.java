@@ -138,6 +138,11 @@ public abstract class AbstractTestGraph extends GraphTestBase
         if (getGraph().getCapabilities().handlesLiteralTyping())
         {
             Graph g1 = getGraphWith( "x P '1'xsd:integer" );
+
+            boolean b = g1.contains( triple( "x P '01'xsd:int" ) );
+            if ( !b )
+                System.err.println("No value match: "+g1.getClass().getSimpleName());
+
             assertTrue( g1.contains( triple( "x P '01'xsd:int" ) ) );
             //
             Graph g2 = getGraphWith( "x P '1'xsd:int" );
@@ -154,7 +159,8 @@ public abstract class AbstractTestGraph extends GraphTestBase
         if (m.getCapabilities().handlesLiteralTyping())
         {
             Node chaten = node( "'chat'en" ), chatEN = node( "'chat'EN" );
-            assertDiffer( chaten, chatEN );
+            //assertDiffer( chaten, chatEN ); // Up to Jena4.
+            assertEquals( chaten, chatEN ); // Jena5 -- the nodes are now the same due to normalized langtags
             assertTrue( chaten.sameValueAs( chatEN ) );
             assertEquals( chaten.getIndexingValue(), chatEN.getIndexingValue() );
             assertEquals( 1, m.find( Node.ANY, Node.ANY, chaten ).toList().size() );
@@ -168,11 +174,19 @@ public abstract class AbstractTestGraph extends GraphTestBase
         if (m.getCapabilities().handlesLiteralTyping())
         {
             Node chaten = node( "'chat'en" ), chatEN = node( "'chat'EN" );
-            assertDiffer( chaten, chatEN );
+            // Jena4.
+//            assertDiffer( chaten, chatEN ); // Up to Jena4.
+//            assertTrue( chaten.sameValueAs( chatEN ) );
+//            assertEquals( chaten.getIndexingValue(), chatEN.getIndexingValue() );
+//            assertEquals( 2, m.find( Node.ANY, Node.ANY, chaten ).toList().size() );
+//            assertEquals( 2, m.find( Node.ANY, Node.ANY, chatEN ).toList().size() );
+
+            // Jena5 -- the nodes are now the same due to normalized langtags
+            assertEquals( chaten, chatEN ); // Jena5 -- the nodes are now the same due to normalized langtags
             assertTrue( chaten.sameValueAs( chatEN ) );
             assertEquals( chaten.getIndexingValue(), chatEN.getIndexingValue() );
-            assertEquals( 2, m.find( Node.ANY, Node.ANY, chaten ).toList().size() );
-            assertEquals( 2, m.find( Node.ANY, Node.ANY, chatEN ).toList().size() );
+            assertEquals( 1, m.find( Node.ANY, Node.ANY, chaten ).toList().size() );
+            assertEquals( 1, m.find( Node.ANY, Node.ANY, chatEN ).toList().size() );
         }
     }
 
@@ -182,7 +196,8 @@ public abstract class AbstractTestGraph extends GraphTestBase
         if (m.getCapabilities().handlesLiteralTyping())
         {
             Node chaten = node( "'chat'en" ), chatEN = node( "'chat'EN" );
-            assertDiffer( chaten, chatEN );
+            //assertDiffer( chaten, chatEN ); // Up to Jena4.
+            assertEquals( chaten, chatEN ); // Jena5 -- the nodes are now the same due to normalized langtags
             assertTrue( chaten.sameValueAs( chatEN ) );
             assertEquals( chaten.getIndexingValue(), chatEN.getIndexingValue() );
             assertEquals( 1, m.find( Node.ANY, Node.ANY, chaten ).toList().size() );
@@ -707,8 +722,6 @@ public abstract class AbstractTestGraph extends GraphTestBase
         assertFalse( containsNode( g, node( "99" ) ) );
     }
 
-
-
     private boolean containsNode(Graph g, Node node)
     {
         return GraphUtil.containsNode(g, node) ;
@@ -911,9 +924,9 @@ public abstract class AbstractTestGraph extends GraphTestBase
         testIsomorphismXMLFile(1,true);
         testIsomorphismXMLFile(2,true);
         testIsomorphismXMLFile(3,true);
-        testIsomorphismXMLFile(4,true);
+//        testIsomorphismXMLFile(4,true); -- Uses daml:collection
         testIsomorphismXMLFile(5,false);
-        testIsomorphismXMLFile(6,false);
+//        testIsomorphismXMLFile(6,false); -- Uses daml:collection
         testIsomorphismNTripleFile(7,true);
         testIsomorphismNTripleFile(8,false);
 
@@ -924,7 +937,6 @@ public abstract class AbstractTestGraph extends GraphTestBase
 
     private void testIsomorphismXMLFile(int i, boolean result) {
         testIsomorphismFile(i,"RDF/XML","rdf",result);
-
     }
 
     private InputStream getInputStream( int n, int n2, String suffix)
@@ -940,6 +952,9 @@ public abstract class AbstractTestGraph extends GraphTestBase
         Model m1 = ModelFactory.createModelForGraph(g1);
         Model m2 = ModelFactory.createModelForGraph(g2);
 
+        // Read regression/testModelEquals/{n}-1.{suffix} and
+        // regression/testModelEquals/{n}-2.{suffix}
+        // check they are isomorphic or nor as expected.
         m1.read(
                 getInputStream(n, 1, suffix),
                 "http://www.example.org/",lang);

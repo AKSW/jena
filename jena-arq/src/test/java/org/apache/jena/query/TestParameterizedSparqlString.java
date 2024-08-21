@@ -963,11 +963,11 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString copy = query.copy();
         copy.setIri("x", "http://example.org/copy");
 
-        Assert.assertEquals("http://example.org/original", query.getParam("x").toString());
-        Assert.assertFalse("http://example.org/copy".equals(query.getParam("x").toString()));
+        Assert.assertEquals("http://example.org/original", query.getParam("x").getURI());
+        Assert.assertFalse("http://example.org/copy".equals(query.getParam("x").getURI()));
 
-        Assert.assertEquals("http://example.org/copy", copy.getParam("x").toString());
-        Assert.assertFalse("http://example.org/original".equals(copy.getParam("x").toString()));
+        Assert.assertEquals("http://example.org/copy", copy.getParam("x").getURI());
+        Assert.assertFalse("http://example.org/original".equals(copy.getParam("x").getURI()));
     }
 
     @Test
@@ -997,7 +997,7 @@ public class TestParameterizedSparqlString {
         query.setIri("x", "http://example.org/original");
         ParameterizedSparqlString copy = query.copy(false);
 
-        Assert.assertEquals("http://example.org/original", query.getParam("x").toString());
+        Assert.assertEquals("http://example.org/original", query.getParam("x").getURI());
         Assert.assertEquals(null, copy.getParam("x"));
     }
 
@@ -1020,11 +1020,11 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString copy = query.copy();
         copy.setIri(0, "http://example.org/copy");
 
-        Assert.assertEquals("http://example.org/original", query.getParam(0).toString());
-        Assert.assertFalse("http://example.org/copy".equals(query.getParam(0).toString()));
+        Assert.assertEquals("http://example.org/original", query.getParam(0).getURI());
+        Assert.assertFalse("http://example.org/copy".equals(query.getParam(0).getURI()));
 
-        Assert.assertEquals("http://example.org/copy", copy.getParam(0).toString());
-        Assert.assertFalse("http://example.org/original".equals(copy.getParam(0).toString()));
+        Assert.assertEquals("http://example.org/copy", copy.getParam(0).getURI());
+        Assert.assertFalse("http://example.org/original".equals(copy.getParam(0).getURI()));
     }
 
     @Test
@@ -1034,7 +1034,7 @@ public class TestParameterizedSparqlString {
         query.setIri(0, "http://example.org/original");
         ParameterizedSparqlString copy = query.copy(false);
 
-        Assert.assertEquals("http://example.org/original", query.getParam(0).toString());
+        Assert.assertEquals("http://example.org/original", query.getParam(0).getURI());
         Assert.assertEquals(null, copy.getParam(0));
     }
 
@@ -1263,7 +1263,7 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
         query.setParam(0, NodeFactory.createURI("http://example.org"));
         query.setParam(1, NodeFactory.createURI("http://predicate"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { <http://example.org> <http://predicate> \"test\" . }", query.toString());
     }
@@ -1273,9 +1273,9 @@ public class TestParameterizedSparqlString {
         // Test regular string injection
         String cmdText = "SELECT * WHERE { ? ? ? . }";
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
-        query.setParam(0, NodeFactory.createLiteral("with ? mark"));
+        query.setParam(0, NodeFactory.createLiteralString("with ? mark"));
         query.setParam(1, NodeFactory.createURI("http://predicate"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { \"with ? mark\" <http://predicate> \"test\" . }", query.toString());
     }
@@ -1285,9 +1285,9 @@ public class TestParameterizedSparqlString {
         // Test regular string injection
         String cmdText = "SELECT * WHERE { ? ? ? . }";
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
-        query.setParam(0, NodeFactory.createLiteral("with ? mark"));
-        query.setParam(1, NodeFactory.createLiteral("with ? mark"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(0, NodeFactory.createLiteralString("with ? mark"));
+        query.setParam(1, NodeFactory.createLiteralString("with ? mark"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { \"with ? mark\" \"with ? mark\" \"test\" . }", query.toString());
     }
@@ -1299,7 +1299,7 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
         query.setParam(0, NodeFactory.createURI("http://example.org"));
         query.setParam(1, NodeFactory.createURI("http://predicate"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { <http://example.org> <http://predicate> \"test\". }", query.toString());
     }
@@ -1311,7 +1311,7 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
         query.setParam(0, NodeFactory.createURI("http://example.org"));
         query.setParam(1, NodeFactory.createURI("http://predicate"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { <http://example.org> <http://predicate> \"test\"; ?p ?o . }", query.toString());
     }
@@ -1323,7 +1323,7 @@ public class TestParameterizedSparqlString {
         ParameterizedSparqlString query = new ParameterizedSparqlString(cmdText);
         query.setParam(0, NodeFactory.createURI("http://example.org"));
         query.setParam(1, NodeFactory.createURI("http://predicate"));
-        query.setParam(2, NodeFactory.createLiteral("test"));
+        query.setParam(2, NodeFactory.createLiteralString("test"));
 
         Assert.assertEquals("SELECT * WHERE { <http://example.org> <http://predicate> \"test\", ?o . }", query.toString());
     }
@@ -1505,12 +1505,21 @@ public class TestParameterizedSparqlString {
         pss.setLiteral("var2", "b");
 
         // Figure out which variable will be injected first
-        @SuppressWarnings("deprecation")
         String first = pss.getVars().next();
         String second = first.equals("var") ? "var2" : "var";
 
         pss.setLiteral(first, "?" + second);
         pss.setLiteral(second, " . } ; DROP ALL ; INSERT DATA { <s> <p> ");
+
+        pss.asUpdate();
+        // Due to the unpredictability of the order of parameters in this.params,
+        // which is a HashMap, here the reverse order is checked to make sure
+        // an ARQException is thrown
+        pss.setLiteral("var", "a");
+        pss.setLiteral("var2", "b");
+
+        pss.setLiteral(second, "?" + first);
+        pss.setLiteral(first, " . } ; DROP ALL ; INSERT DATA { <s> <p> ");
 
         pss.asUpdate();
         Assert.fail("Attempt to do SPARQL injection should result in an exception");
@@ -1579,12 +1588,21 @@ public class TestParameterizedSparqlString {
         pss.setLiteral("var2", "b");
 
         // Figure out which variable will be injected first
-        @SuppressWarnings("deprecation")
         String first = pss.getVars().next();
         String second = first.equals("var") ? "var2" : "var";
 
         pss.setLiteral(first, " ?" + second + " ");
         pss.setLiteral(second, " . } ; DROP ALL ; INSERT DATA { <s> <p> ");
+
+        pss.asUpdate();
+        // Due to the unpredictability of the order of parameters in this.params,
+        // which is a HashMap, here the reverse order is checked to make sure
+        // an ARQException is thrown
+        pss.setLiteral("var", "a");
+        pss.setLiteral("var2", "b");
+
+        pss.setLiteral(second, " ?" + first + " ");
+        pss.setLiteral(first, " . } ; DROP ALL ; INSERT DATA { <s> <p> ");
 
         pss.asUpdate();
         Assert.fail("Attempt to do SPARQL injection should result in an exception");

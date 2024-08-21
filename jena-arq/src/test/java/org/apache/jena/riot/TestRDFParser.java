@@ -106,7 +106,7 @@ public class TestRDFParser {
     // Shortcut source
     @Test public void source_shortcut_01() {
         Graph graph = GraphFactory.createGraphMem();
-        RDFParser.fromString(testdata).lang(Lang.TTL).parse(graph);
+        RDFParser.fromString(testdata, Lang.TTL).parse(graph);
         assertEquals(1, graph.size());
     }
 
@@ -231,23 +231,23 @@ public class TestRDFParser {
         testNormalization("+123.00e0", "1.23E2", builder().canonicalValues(true));
     }
 
-    @Test public void canonical_langTag_1() {
-        testNormalization("'abc'@En-gB", "'abc'@En-gB", builder().langTagAsGiven());
-    }
-
-    @Test public void canonical_langTag_2() {
-        testNormalization("'abc'@En-gB", "'abc'@en-gb", builder().langTagLowerCase());
-    }
-
-    @Test public void canonical_langTag_3() {
-        testNormalization("'abc'@En-gB", "'abc'@en-GB", builder().langTagCanonical());
-    }
+    // Old tests that applied to Java4. Delete in the future.
+//    @Test public void canonical_langTag_1() {
+//        testNormalization("'abc'@En-gB", "'abc'@En-gB", builder().langTagAsGiven());
+//    }
+//
+//    @Test public void canonical_langTag_2() {
+//        testNormalization("'abc'@En-gB", "'abc'@en-gb", builder().langTagLowerCase());
+//    }
+//
+//    @Test public void canonical_langTag_3() {
+//        testNormalization("'abc'@En-gB", "'abc'@en-GB", builder().langTagCanonical());
+//    }
 
     @Test
     public void parser_fragment() {
         PrefixMap pmap = PrefixMapFactory.create(Map.of("", "http://example/"));
-        Graph g = RDFParser.fromString("<s> :p :o .")
-                .lang(Lang.TTL)
+        Graph g = RDFParser.fromString("<s> :p :o .", Lang.TTL)
                 .prefixes(pmap)
                 .base("http://base/")
                 .toGraph();

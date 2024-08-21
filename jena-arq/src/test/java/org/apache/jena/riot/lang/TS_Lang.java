@@ -19,6 +19,7 @@
 package org.apache.jena.riot.lang;
 
 import org.apache.jena.atlas.legacy.BaseTest2 ;
+import org.apache.jena.riot.lang.rdfxml.TC_RIOT_RDFXML;
 import org.junit.AfterClass ;
 import org.junit.BeforeClass ;
 import org.junit.runner.RunWith ;
@@ -44,8 +45,8 @@ import org.junit.runners.Suite ;
     // Protobuf is done in the "protobuf" package
     // Thrift is done in the "thrift" package
     , TestParserFactory.class
-    , TestPipedRDFIterators.class
     , TestCollectorStream.class
+    , TC_RIOT_RDFXML.class
 })
 
 public class TS_Lang

@@ -60,7 +60,7 @@ public abstract class IRIx {
      * It returns a IRIx holder and does no checking whatsoever.
      * Whether the IRI "works" is down to care by the application.
      */
-    static public IRIx createAny(String iri) throws IRIException {
+    static public IRIx createAny(String iri) {
         Objects.requireNonNull(iri);
         return IRIProviderAny.stringProvider().create(iri);
     }
@@ -84,6 +84,9 @@ public abstract class IRIx {
      * <p>
      * Note that a URI can be both "not absolute" and "not relative", e.g. {@code http://example/path#fragment}.
      * <p>
+     * Beware that <a href="https://datatracker.ietf.org/doc/html/rfc2396#section-3.1">RFC 2396 section 3.1</a> has a
+     * different definition, where the scheme is required but a fragment may be present.
+     * <p>
      * See {@linkplain #isReference()} for testing whether a URI is suitable for use in RDF.
      */
     public abstract boolean isAbsolute();
@@ -106,6 +109,13 @@ public abstract class IRIx {
      * The scheme name should be lowercase.
      */
     public abstract boolean hasScheme(String scheme);
+
+    /**
+     * Return the IRI scheme, if known.
+     * <p>
+     * Returns null for "no scheme" (relative IRI).
+     */
+    public abstract String scheme();
 
     /**
      * An <em>RDF Reference</em> is an URI which has scheme.

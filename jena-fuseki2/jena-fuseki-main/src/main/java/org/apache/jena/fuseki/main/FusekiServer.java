@@ -19,6 +19,7 @@
 package org.apache.jena.fuseki.main;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.jena.atlas.lib.PropertyUtils.loadFromFile;
 import static org.apache.jena.fuseki.Fuseki.serverLog;
 
 import java.io.IOException;
@@ -27,12 +28,11 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import javax.servlet.Filter;
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import jakarta.servlet.Filter;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.jena.atlas.json.JSON;
 import org.apache.jena.atlas.json.JsonObject;
 import org.apache.jena.atlas.lib.FileOps;
@@ -54,6 +54,7 @@ import org.apache.jena.fuseki.metrics.MetricsProviderRegistry;
 import org.apache.jena.fuseki.server.*;
 import org.apache.jena.fuseki.servlets.*;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.rdf.model.*;
 import org.apache.jena.shared.JenaException;
@@ -63,14 +64,17 @@ import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.NotUniqueException;
 import org.apache.jena.sparql.util.graph.GraphUtils;
 import org.apache.jena.sys.JenaSystem;
-import org.eclipse.jetty.security.ConstraintSecurityHandler;
+import org.apache.jena.system.G;
+import org.apache.jena.web.HttpSC;
+import org.eclipse.jetty.ee10.servlet.DefaultServlet;
+import org.eclipse.jetty.ee10.servlet.FilterHolder;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
+import org.eclipse.jetty.ee10.servlet.security.ConstraintSecurityHandler;
 import org.eclipse.jetty.security.SecurityHandler;
 import org.eclipse.jetty.security.UserStore;
 import org.eclipse.jetty.server.*;
-import org.eclipse.jetty.servlet.DefaultServlet;
-import org.eclipse.jetty.servlet.FilterHolder;
-import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.slf4j.Logger;
 
 /**
@@ -143,6 +147,16 @@ public class FusekiServer {
     public static Builder create(OperationRegistry serviceDispatchRegistry) {
         return new Builder(serviceDispatchRegistry);
     }
+
+    /**
+     * Default port when running in Java via {@code FusekiServer....build()}.
+     * The server will be http://localhost:3330.
+     *
+     * This is not the command line port (3030) which the command line programme sets.
+     *
+     * See {@link FusekiMain#defaultPort} and {@link FusekiMain#defaultHttpsPort}.
+     */
+    public static final int DefaultServerPort  = 3330;
 
     private final Server server;
     private int httpPort;
@@ -317,8 +331,7 @@ public class FusekiServer {
 
         // Extract the ports from the Connectors.
         Arrays.stream(connectors).forEach(c->{
-            if ( c instanceof ServerConnector ) {
-                ServerConnector connector = (ServerConnector)c;
+            if ( c instanceof ServerConnector connector ) {
                 String protocol = connector.getDefaultConnectionFactory().getProtocol();
                 String scheme = (protocol.startsWith("SSL-") || protocol.equals("SSL")) ? "https" : "http";
                 int port = connector.getLocalPort();
@@ -373,7 +386,6 @@ public class FusekiServer {
 
     /** FusekiServer.Builder */
     public static class Builder {
-        private static final int DefaultServerPort  = 3330;
         private static final int PortUnset          = -2;
         private static final int PortInactive       = -3;
 
@@ -389,6 +401,7 @@ public class FusekiServer {
         private boolean                  networkLoopback    = false;
         private int                      minThreads         = -1;
         private int                      maxThreads         = -1;
+        private ErrorHandler             errorHandler       = new FusekiErrorHandler();
 
         private boolean                  verbose            = false;
         private boolean                  withCompact        = false;
@@ -489,11 +502,12 @@ public class FusekiServer {
             return this;
         }
 
-        /** Context path to Fuseki.  If it's "/" then Fuseki URL look like
+        /**
+         * Context path to Fuseki.  If it's "/" then Fuseki URL look like
          * "http://host:port/dataset/query" else "http://host:port/path/dataset/query"
+         * The default is "/".
          */
         public Builder contextPath(String path) {
-            requireNonNull(path, "path");
             this.contextPath = path;
             return this;
         }
@@ -507,6 +521,8 @@ public class FusekiServer {
         /** Set the location (filing system directory) to serve static files from. */
         public Builder staticFileBase(String directory) {
             requireNonNull(directory, "directory");
+            if ( ! FileOps.exists(directory) )
+                Fuseki.configLog.warn("File area not found: "+directory);
             this.staticContentDir = directory;
             return this;
         }
@@ -540,8 +556,16 @@ public class FusekiServer {
         /** Add the Cross Origin (CORS) filter.
          * {@link CrossOriginFilter}.
          */
-        public Builder enableCors(boolean withCORS) {
-            corsInitParams = withCORS ? corsInitParamsDft : null ;
+        public Builder enableCors(boolean withCORS, String corsConfigFile) {
+            if (withCORS) {
+                if(null == corsConfigFile) {
+                    corsInitParams = corsInitParamsDft;
+                } else {
+                    corsInitParams = parseCORSConfigFile(corsConfigFile);
+                }
+            } else {
+                corsInitParams = null;
+            }
             return this;
         }
 
@@ -818,6 +842,8 @@ public class FusekiServer {
             if ( server == null )
                 return;
 
+            if ( server.hasProperty(FusekiVocab.pServerContextPath) )
+                contextPath(argString(server, FusekiVocab.pServerContextPath, "/"));
             enablePing(argBoolean(server, FusekiVocab.pServerPing,  false));
             enableStats(argBoolean(server, FusekiVocab.pServerStats, false));
             enableMetrics(argBoolean(server, FusekiVocab.pServerMetrics, false));
@@ -866,6 +892,25 @@ public class FusekiServer {
                 throw new FusekiConfigException("Not a boolean for '"+p+"' : "+stmt.getObject());
             }
         }
+
+        private static String argString(Resource r, Property p, String dftValue) {
+            try { GraphUtils.atmostOneProperty(r, p); }
+            catch (NotUniqueException ex) {
+                throw new FusekiConfigException(ex.getMessage());
+            }
+            Statement stmt = r.getProperty(p);
+            if ( stmt == null )
+                return dftValue;
+            try {
+                Node n = stmt.getObject().asLiteral().asNode();
+                if ( ! G.isString(n) )
+                    throw new FusekiConfigException("Not a string for '"+p+"' : "+stmt.getObject());
+                return n.getLiteralLexicalForm();
+            } catch (JenaException ex) {
+                throw new FusekiConfigException("Not a string for '"+p+"' : "+stmt.getObject());
+            }
+        }
+
 
         /**
          * Choose the HTTP authentication scheme.
@@ -1001,8 +1046,8 @@ public class FusekiServer {
             requireNonNull(processor, "processor");
 
             HttpServlet servlet;
-            if ( processor instanceof HttpServlet )
-                servlet = (HttpServlet)processor;
+            if ( processor instanceof HttpServlet proc )
+                servlet = proc;
             else
                 servlet = new ServletAction(processor, log);
             addServlet(pathSpec, servlet);
@@ -1050,25 +1095,6 @@ public class FusekiServer {
             beforeFilters.add(Pair.create(pathSpec, filter));
             return this;
         }
-
-        /** @deprecated Use {@link #fusekiModules(FusekiModules)}. */
-        @Deprecated
-        public Builder setModules(FusekiModules modules) {
-            return fusekiModules(modules);
-        }
-
-        // Conflict with fusekiModules()
-//        /**
-//         * Set the {@link FusekiModules Fuseki Modules} for a server.
-//         * If no modules are added to a builder, then the system-wide default set (found by loading FusekiModules
-//         * via Java's {@link ServiceLoader} mechanism) is used.
-//         * <p>Pass {@code null} to switch back the system-wide default set.
-//         *
-//         * @see FusekiModules
-//         */
-//        public Builder fusekiModules(FusekiModule ...fmods) {
-//            return fusekiModules(FusekiModules.create(fmods));
-//        }
 
         /**
          * Set the {@link FusekiModule Fuseki Module} for a server.
@@ -1185,7 +1211,9 @@ public class FusekiServer {
         }
 
         /**
-         * Set the number threads used by Jetty. This uses a {@code org.eclipse.jetty.util.thread.QueuedThreadPool} provided by Jetty.
+         * Set the number threads used by Jetty.
+         * This uses a {@link org.eclipse.jetty.util.thread.QueuedThreadPool}
+         * provided by Jetty.
          * <p>
          * Argument order is (minThreads, maxThreads).
          * <ul>
@@ -1297,8 +1325,16 @@ public class FusekiServer {
                     server = jettyServer(handler, httpPort, minThreads, maxThreads);
                 } else {
                     // HTTPS, no http redirection.
-                    server = jettyServerHttps(handler, httpPort, httpsPort, minThreads, maxThreads, httpsKeystore, httpsKeystorePasswd);
+                    server = jettyServerHttps(handler, httpPort, httpsPort, minThreads, maxThreads,
+                                              httpsKeystore, httpsKeystorePasswd);
                 }
+                // The servletContext error handler isn't called when there is a
+                // dispatch to something that isn't there.
+                // Jetty default error handler is broken for application/json for Jetty GH-10474
+                // Jetty 12.0.1 - fixed at 12.0.next
+                if ( errorHandler != null )
+                    server.setErrorHandler(errorHandler);
+
                 if ( networkLoopback )
                     applyLocalhost(server);
 
@@ -1544,7 +1580,8 @@ public class FusekiServer {
                 contextPath = "/" + contextPath;
             ServletContextHandler context = new ServletContextHandler();
             context.setDisplayName(Fuseki.servletRequestLogName);
-            context.setErrorHandler(new FusekiErrorHandler());
+            // Also set on the server which handles request that don't dispatch.
+            context.setErrorHandler(errorHandler);
             context.setContextPath(contextPath);
             // SPARQL Update by HTML - not the best way but.
             context.setMaxFormContentSize(1024*1024);
@@ -1598,7 +1635,7 @@ public class FusekiServer {
             if ( staticContentDir != null ) {
                 DefaultServlet staticServlet = new DefaultServlet();
                 ServletHolder staticContent = new ServletHolder(staticServlet);
-                staticContent.setInitParameter("resourceBase", staticContentDir);
+                staticContent.setInitParameter("baseResource", staticContentDir);
                 //staticContent.setInitParameter("cacheControl", "false");
                 context.addServlet(staticContent, "/");
             } else {
@@ -1612,6 +1649,8 @@ public class FusekiServer {
 
         /** 404 for HEAD/GET/POST/PUT */
         static class Servlet404 extends HttpServlet {
+
+            public Servlet404() {}
             // service()?
             @Override
             protected void doHead(HttpServletRequest req, HttpServletResponse resp)     { err404(req, resp); }
@@ -1626,7 +1665,7 @@ public class FusekiServer {
             //protected void doOptions(HttpServletRequest req, HttpServletResponse resp)
             private static void err404(HttpServletRequest req, HttpServletResponse response) {
                 try {
-                    response.sendError(404, "NOT FOUND");
+                    response.sendError(HttpSC.NOT_FOUND_404, HttpSC.getMessage(HttpSC.NOT_FOUND_404));
                 } catch (IOException ex) {}
             }
         }
@@ -1669,7 +1708,7 @@ public class FusekiServer {
             return server;
         }
 
-        /** Jetty server with https. */
+        /** Jetty server with https */
         private static Server jettyServerHttps(ServletContextHandler handler, int httpPort, int httpsPort, int minThreads, int maxThreads, String keystore, String certPassword) {
             return JettyHttps.jettyServerHttps(handler, keystore, certPassword, httpPort, httpsPort, minThreads, maxThreads);
         }
@@ -1678,9 +1717,22 @@ public class FusekiServer {
         private static void applyLocalhost(Server server) {
             Connector[] connectors = server.getConnectors();
             for ( int i = 0; i < connectors.length; i++ ) {
-                if ( connectors[i] instanceof ServerConnector ) {
-                    ((ServerConnector)connectors[i]).setHost("localhost");
+                if ( connectors[i] instanceof ServerConnector serverConnector) {
+                    serverConnector.setHost("localhost");
                 }
+            }
+        }
+
+        private static Map<String, String> parseCORSConfigFile(String filename) {
+            try {
+                Properties properties = loadFromFile(filename);
+                Map<String, String> map = new HashMap<>(properties.size());
+                for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+                    map.put((String) entry.getKey(), (String) entry.getValue());
+                }
+                return map;
+            } catch (Exception ex) {
+                throw new FusekiConfigException("Failed to read the CORS config file: "+ filename, ex);
             }
         }
     }

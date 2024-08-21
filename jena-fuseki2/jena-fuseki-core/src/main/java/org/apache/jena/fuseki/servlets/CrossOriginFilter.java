@@ -20,41 +20,53 @@ package org.apache.jena.fuseki.servlets;
 
 // This is a copy of Jetty's CrossOriginFilter - Fuseki needs something
 // that works without Jetty on the classpath when running as a WAR file.
-// Copy from Jetty 10.0.11
-// https://github.com/eclipse/jetty.project/blob/jetty-10.0.x/jetty-servlets/src/main/java/org/eclipse/jetty/servlets/CrossOriginFilter.java
+// Copy from Jetty 11.0.15
+// https://github.com/eclipse/jetty.project/blob/jetty-11.0.x/jetty-servlets/src/main/java/org/eclipse/jetty/servlets/CrossOriginFilter.java
 // We elect to use and distribute under The Apache License v2.0.
 
 //Changes:
 //  * Package declaration
-//  * Comment out casts in to remove warnings in method isEnabled.
-//  * Functions from org.eclipse.jetty.utilStringUtil to make this class portable.
+//  * Functions from org.eclipse.jetty.utilStringUtil to make this class portable
 
 //
-//========================================================================
-//Copyright (c) 1995-2022 Mort Bay Consulting Pty Ltd and others.
+// ========================================================================
+// Copyright (c) 1995 Mort Bay Consulting Pty Ltd and others.
 //
-//This program and the accompanying materials are made available under the
-//terms of the Eclipse Public License v. 2.0 which is available at
-//https://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
-//which is available at https://www.apache.org/licenses/LICENSE-2.0.
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License v. 2.0 which is available at
+// https://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+// which is available at https://www.apache.org/licenses/LICENSE-2.0.
 //
-//SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
-//========================================================================
+// SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+// ========================================================================
 //
 
-//package org.eclipse.jetty.servlets;
+//package org.eclipse.jetty.ee10.servlets;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.servlet.*;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.PreEncodedHttpField;
+import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * Implementation of the
@@ -89,7 +101,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * The check whether the timing header is set, will be performed only if
  * the user gets general access to the resource using the <b>allowedOrigins</b>.
- *
+ * </dd>
  * <dt>allowedMethods</dt>
  * <dd>a comma separated list of HTTP methods that
  * are allowed to be used when accessing the resources. Default value is
@@ -128,7 +140,7 @@ import org.slf4j.LoggerFactory;
  *     ...
  *     &lt;filter&gt;
  *         &lt;filter-name&gt;cross-origin&lt;/filter-name&gt;
- *         &lt;filter-class&gt;org.eclipse.jetty.servlets.CrossOriginFilter&lt;/filter-class&gt;
+ *         &lt;filter-class&gt;org.eclipse.jetty.ee10.servlets.CrossOriginFilter&lt;/filter-class&gt;
  *     &lt;/filter&gt;
  *     &lt;filter-mapping&gt;
  *         &lt;filter-name&gt;cross-origin&lt;/filter-name&gt;
@@ -170,17 +182,18 @@ public class CrossOriginFilter implements Filter
     private static final List<String> SIMPLE_HTTP_METHODS = Arrays.asList("GET", "POST", "HEAD");
     private static final List<String> DEFAULT_ALLOWED_METHODS = Arrays.asList("GET", "POST", "HEAD");
     private static final List<String> DEFAULT_ALLOWED_HEADERS = Arrays.asList("X-Requested-With", "Content-Type", "Accept", "Origin");
+    private static final HttpField VARY_ORIGIN = new PreEncodedHttpField(HttpHeader.VARY, HttpHeader.ORIGIN.asString());
 
     private boolean anyOriginAllowed;
     private boolean anyTimingOriginAllowed;
     private boolean anyHeadersAllowed;
-    private Set<String> allowedOrigins = new HashSet<String>();
-    private List<Pattern> allowedOriginPatterns = new ArrayList<Pattern>();
-    private Set<String> allowedTimingOrigins = new HashSet<String>();
-    private List<Pattern> allowedTimingOriginPatterns = new ArrayList<Pattern>();
-    private List<String> allowedMethods = new ArrayList<String>();
-    private List<String> allowedHeaders = new ArrayList<String>();
-    private List<String> exposedHeaders = new ArrayList<String>();
+    private final Set<String> allowedOrigins = new HashSet<>();
+    private final List<Pattern> allowedOriginPatterns = new ArrayList<>();
+    private final Set<String> allowedTimingOrigins = new HashSet<>();
+    private final List<Pattern> allowedTimingOriginPatterns = new ArrayList<>();
+    private final List<String> allowedMethods = new ArrayList<>();
+    private final List<String> allowedHeaders = new ArrayList<>();
+    private final List<String> exposedHeaders = new ArrayList<>();
     private int preflightMaxAge;
     private boolean allowCredentials;
     private boolean chainPreflight;
@@ -290,6 +303,7 @@ public class CrossOriginFilter implements Filter
 
     private void handle(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException
     {
+        response.addHeader(VARY_ORIGIN.getName(), VARY_ORIGIN.getValue());
         String origin = request.getHeader(ORIGIN_HEADER);
         // Is it a cross origin request ?
         if (origin != null && isEnabled(request))
@@ -340,12 +354,12 @@ public class CrossOriginFilter implements Filter
         // protocol that does not accept extra response headers on the upgrade response
         for (Enumeration<String> connections = request.getHeaders("Connection"); connections.hasMoreElements(); )
         {
-            String connection = /*(String)*/connections.nextElement();
+            String connection = connections.nextElement();
             if ("Upgrade".equalsIgnoreCase(connection))
             {
                 for (Enumeration<String> upgrades = request.getHeaders("Upgrade"); upgrades.hasMoreElements(); )
                 {
-                    String upgrade = /*(String)*/upgrades.nextElement();
+                    String upgrade = upgrades.nextElement();
                     if ("WebSocket".equalsIgnoreCase(upgrade))
                         return false;
                 }
@@ -402,16 +416,12 @@ public class CrossOriginFilter implements Filter
         String method = request.getMethod();
         if (!"OPTIONS".equalsIgnoreCase(method))
             return false;
-        if (request.getHeader(ACCESS_CONTROL_REQUEST_METHOD_HEADER) == null)
-            return false;
-        return true;
+        return request.getHeader(ACCESS_CONTROL_REQUEST_METHOD_HEADER) != null;
     }
 
     private void handleSimpleResponse(HttpServletRequest request, HttpServletResponse response, String origin)
     {
         response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, origin);
-        //W3C CORS spec http://www.w3.org/TR/cors/#resource-implementation
-        response.addHeader("Vary", ORIGIN_HEADER);
         if (allowCredentials)
             response.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, "true");
         if (!exposedHeaders.isEmpty())
@@ -429,9 +439,6 @@ public class CrossOriginFilter implements Filter
         if (!headersAllowed)
             return;
         response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN_HEADER, origin);
-        //W3C CORS spec http://www.w3.org/TR/cors/#resource-implementation
-        if (!anyOriginAllowed)
-            response.addHeader("Vary", ORIGIN_HEADER);
         if (allowCredentials)
             response.setHeader(ACCESS_CONTROL_ALLOW_CREDENTIALS_HEADER, "true");
         if (preflightMaxAge > 0)
@@ -461,7 +468,7 @@ public class CrossOriginFilter implements Filter
         if (accessControlRequestHeaders == null)
             return Collections.emptyList();
 
-        List<String> requestedHeaders = new ArrayList<String>();
+        List<String> requestedHeaders = new ArrayList<>();
         String[] headers = StringUtil.csvSplit(accessControlRequestHeaders);
         for (String header : headers)
         {
@@ -528,262 +535,5 @@ public class CrossOriginFilter implements Filter
         allowedHeaders.clear();
         preflightMaxAge = 0;
         allowCredentials = false;
-    }
-}
-
-class StringUtil {
-    /**
-     * Replace chars within string.
-     * <p>
-     * Fast replacement for {@code java.lang.String#}{@link String#replace(char, char)}
-     * </p>
-     *
-     * @param str the input string
-     * @param find the char to look for
-     * @param with the char to replace with
-     * @return the now replaced string
-     */
-    public static String replace(String str, char find, char with)
-    {
-        if (str == null)
-            return null;
-
-        if (find == with)
-            return str;
-
-        int c = 0;
-        int idx = str.indexOf(find, c);
-        if (idx == -1)
-        {
-            return str;
-        }
-        char[] chars = str.toCharArray();
-        int len = chars.length;
-        for (int i = idx; i < len; i++)
-        {
-            if (chars[i] == find)
-                chars[i] = with;
-        }
-        return String.valueOf(chars);
-    }
-
-    /**
-     * Replace substrings within string.
-     * <p>
-     * Fast replacement for {@code java.lang.String#}{@link String#replace(CharSequence, CharSequence)}
-     * </p>
-     *
-     * @param s the input string
-     * @param sub the string to look for
-     * @param with the string to replace with
-     * @return the now replaced string
-     */
-    public static String replace(String s, String sub, String with)
-    {
-        if (s == null)
-            return null;
-
-        int c = 0;
-        int i = s.indexOf(sub, c);
-        if (i == -1)
-        {
-            return s;
-        }
-        StringBuilder buf = new StringBuilder(s.length() + with.length());
-        do
-        {
-            buf.append(s, c, i);
-            buf.append(with);
-            c = i + sub.length();
-        }
-        while ((i = s.indexOf(sub, c)) != -1);
-        if (c < s.length())
-        {
-            buf.append(s.substring(c));
-        }
-        return buf.toString();
-    }
-
-
-    /**
-     * Parse a CSV string using {@link #csvSplit(List, String, int, int)}
-     *
-     * @param s The string to parse
-     * @return An array of parsed values.
-     */
-    public static String[] csvSplit(String s)
-    {
-        if (s == null)
-            return null;
-        return csvSplit(s, 0, s.length());
-    }
-
-    /**
-     * Parse a CSV string using {@link #csvSplit(List, String, int, int)}
-     *
-     * @param s The string to parse
-     * @param off The offset into the string to start parsing
-     * @param len The len in characters to parse
-     * @return An array of parsed values.
-     */
-    public static String[] csvSplit(String s, int off, int len)
-    {
-        if (s == null)
-            return null;
-        if (off < 0 || len < 0 || off > s.length())
-            throw new IllegalArgumentException();
-        List<String> list = new ArrayList<>();
-        csvSplit(list, s, off, len);
-        return list.toArray(new String[list.size()]);
-    }
-
-    enum CsvSplitState
-    {
-        PRE_DATA, QUOTE, SLOSH, DATA, WHITE, POST_DATA
-    }
-
-    /**
-     * Split a quoted comma separated string to a list
-     * <p>Handle <a href="https://www.ietf.org/rfc/rfc4180.txt">rfc4180</a>-like
-     * CSV strings, with the exceptions:<ul>
-     * <li>quoted values may contain double quotes escaped with back-slash
-     * <li>Non-quoted values are trimmed of leading trailing white space
-     * <li>trailing commas are ignored
-     * <li>double commas result in a empty string value
-     * </ul>
-     *
-     * @param list The Collection to split to (or null to get a new list)
-     * @param s The string to parse
-     * @param off The offset into the string to start parsing
-     * @param len The len in characters to parse
-     * @return list containing the parsed list values
-     */
-    public static List<String> csvSplit(List<String> list, String s, int off, int len)
-    {
-        if (list == null)
-            list = new ArrayList<>();
-        CsvSplitState state = CsvSplitState.PRE_DATA;
-        StringBuilder out = new StringBuilder();
-        int last = -1;
-        while (len > 0)
-        {
-            char ch = s.charAt(off++);
-            len--;
-
-            switch (state)
-            {
-                case PRE_DATA:
-                    if (Character.isWhitespace(ch))
-                        continue;
-                    if ('"' == ch)
-                    {
-                        state = CsvSplitState.QUOTE;
-                        continue;
-                    }
-
-                    if (',' == ch)
-                    {
-                        list.add("");
-                        continue;
-                    }
-                    state = CsvSplitState.DATA;
-                    out.append(ch);
-                    continue;
-
-                case DATA:
-                    if (Character.isWhitespace(ch))
-                    {
-                        last = out.length();
-                        out.append(ch);
-                        state = CsvSplitState.WHITE;
-                        continue;
-                    }
-
-                    if (',' == ch)
-                    {
-                        list.add(out.toString());
-                        out.setLength(0);
-                        state = CsvSplitState.PRE_DATA;
-                        continue;
-                    }
-                    out.append(ch);
-                    continue;
-
-                case WHITE:
-                    if (Character.isWhitespace(ch))
-                    {
-                        out.append(ch);
-                        continue;
-                    }
-
-                    if (',' == ch)
-                    {
-                        out.setLength(last);
-                        list.add(out.toString());
-                        out.setLength(0);
-                        state = CsvSplitState.PRE_DATA;
-                        continue;
-                    }
-
-                    state = CsvSplitState.DATA;
-                    out.append(ch);
-                    last = -1;
-                    continue;
-
-                case QUOTE:
-                    if ('\\' == ch)
-                    {
-                        state = CsvSplitState.SLOSH;
-                        continue;
-                    }
-                    if ('"' == ch)
-                    {
-                        list.add(out.toString());
-                        out.setLength(0);
-                        state = CsvSplitState.POST_DATA;
-                        continue;
-                    }
-                    out.append(ch);
-                    continue;
-
-                case SLOSH:
-                    out.append(ch);
-                    state = CsvSplitState.QUOTE;
-                    continue;
-
-                case POST_DATA:
-                    if (',' == ch)
-                    {
-                        state = CsvSplitState.PRE_DATA;
-                        continue;
-                    }
-                    continue;
-
-                default:
-                    throw new IllegalStateException(state.toString());
-            }
-        }
-        switch (state)
-        {
-            case PRE_DATA:
-            case POST_DATA:
-                break;
-
-            case DATA:
-            case QUOTE:
-            case SLOSH:
-                list.add(out.toString());
-                break;
-
-            case WHITE:
-                out.setLength(last);
-                list.add(out.toString());
-                break;
-
-            default:
-                throw new IllegalStateException(state.toString());
-        }
-
-        return list;
     }
 }

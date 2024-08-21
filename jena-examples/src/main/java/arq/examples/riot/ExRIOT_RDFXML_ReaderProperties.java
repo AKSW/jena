@@ -18,7 +18,6 @@
 
 package arq.examples.riot;
 
-import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,8 +29,14 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.SysRIOT;
+import org.apache.jena.riot.lang.rdfxml.RRX;
 
-/** Set properties of the RDF/XML parser (ARP) */
+/**
+ * Set properties of the RDF/XML parser (ARP)
+ * Note the use of language {@link RRX#RDFXML_ARP1}.
+ * <b>This example only applies to the legacy ARP parser</b>
+ * Applications should use {@code RDFParser...lang(LANG./RDFXML)...}.
+ */
 public class ExRIOT_RDFXML_ReaderProperties {
     static { LogCtl.setLogging(); }
 
@@ -47,6 +52,8 @@ public class ExRIOT_RDFXML_ReaderProperties {
             );
         System.out.println(data);
         System.out.println();
+        @SuppressWarnings("deprecation")
+        Lang legacyARP1 = RRX.RDFXML_ARP1;
         // Properties to be set.
         // See
         //   https://jena.apache.org/documentation/io/rdfxml-io.html
@@ -58,9 +65,7 @@ public class ExRIOT_RDFXML_ReaderProperties {
 
         Model model = ModelFactory.createDefaultModel();
         // Build and run a parser
-        RDFParser.create()
-            .lang(Lang.RDFXML)
-            .source(new StringReader(data))
+        RDFParser.fromString(data, legacyARP1)
             .set(SysRIOT.sysRdfReaderProperties, properties)
             .base("http://example/base/")
             .parse(model);

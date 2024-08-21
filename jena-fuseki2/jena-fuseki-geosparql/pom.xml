@@ -23,7 +23,7 @@
     <parent>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-fuseki</artifactId>
-      <version>4.9.0</version>
+      <version>5.0.0-SNAPSHOT</version>
       <relativePath>../</relativePath>
     </parent>
     
@@ -38,31 +38,27 @@
       <dependency>
         <groupId>org.apache.jena</groupId>
         <artifactId>jena-geosparql</artifactId>
-        <version>4.9.0</version>
+        <version>5.0.0-SNAPSHOT</version>
       </dependency>
 
       <dependency>
         <groupId>org.apache.jena</groupId>
         <artifactId>jena-fuseki-main</artifactId>
-        <version>4.9.0</version>
+        <version>5.0.0-SNAPSHOT</version>
       </dependency>
 
       <dependency>
-        <groupId>io.github.galbiston</groupId>
-        <artifactId>rdf-tables</artifactId>
-      </dependency>
-
-      <dependency>
-        <!-- rdf-tables:1.0.4
+		<groupId>com.opencsv</groupId>
+	    <artifactId>opencsv</artifactId>
+		<version>5.9</version>
+	        <!-- rdf-tables:1.0.4
                -> com.opencsv:opencsv:jar:3.9 
                  -> commons-beanutils:commons-beanutils:19.3
              CVE-2019-10086 https://nvd.nist.gov/vuln/detail/CVE-2019-10086 
              commons-beanutils:commons-beanutils:jar:1.9.3
              Needs to be 1.9.4.
              We exclude it from rdf-tables and directly depend on it here.
-        -->
-        <groupId>commons-beanutils</groupId>
-        <artifactId>commons-beanutils</artifactId>
+    	    -->
         <exclusions>
           <!-- Use jcl-over-slf4j -->
           <exclusion>
@@ -94,7 +90,7 @@
 
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
+        <artifactId>log4j-slf4j2-impl</artifactId>
       </dependency>
 
       <!-- Put in to ensure the dependency isn't optional. -->

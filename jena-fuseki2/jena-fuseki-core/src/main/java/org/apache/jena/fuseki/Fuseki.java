@@ -22,7 +22,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import org.apache.jena.atlas.lib.DateTimeUtils;
 import org.apache.jena.atlas.lib.Version;
@@ -33,8 +33,8 @@ import org.apache.jena.riot.system.stream.StreamManager;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.MappingRegistry;
 import org.apache.jena.sys.JenaSystem;
-import org.apache.jena.tdb.TDB;
-import org.apache.jena.tdb.transaction.TransactionManager;
+import org.apache.jena.tdb1.TDB1;
+import org.apache.jena.tdb1.transaction.TransactionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +70,7 @@ public class Fuseki {
     static public final String        NAME              = "Apache Jena Fuseki";
 
     /** Version of this Fuseki instance */
-    static public final String        VERSION           = Version.versionForClass(Fuseki.class).orElse("<devlopment>");
+    static public final String        VERSION           = Version.versionForClass(Fuseki.class).orElse("<development>");
 
     /** Supporting Graph Store Protocol direct naming.
      * <p>
@@ -184,8 +184,8 @@ public class Fuseki {
         Object x = cxt.getAttribute(attrVerbose);
         if ( x == null )
             return false;
-        if ( x instanceof Boolean )
-            return (Boolean)x;
+        if ( x instanceof Boolean bool )
+            return bool.booleanValue();
         throw new FusekiException("attrVerbose: unknown object class: "+x.getClass().getName());
     }
 
@@ -245,7 +245,7 @@ public class Fuseki {
         JenaSystem.init();
         MappingRegistry.addPrefixMapping("fuseki", FusekiSymbolIRI);
 
-        TDB.setOptimizerWarningFlag(false);
+        TDB1.setOptimizerWarningFlag(false);
         // Don't use TDB1 batch commits.
         // This can be slower, but it less memory hungry and more predictable.
         TransactionManager.QueueBatchSize = 0;

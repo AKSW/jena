@@ -19,6 +19,7 @@
 package org.apache.jena.fuseki.mgt;
 
 import static java.lang.String.format;
+import static org.apache.jena.atlas.lib.Lib.lowercase;
 import static org.apache.jena.fuseki.build.FusekiPrefixes.PREFIXES;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jena.atlas.RuntimeIOException;
@@ -69,7 +70,7 @@ import org.apache.jena.sparql.core.DatasetGraph;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.core.assembler.AssemblerUtils;
 import org.apache.jena.sparql.util.FmtUtils;
-import org.apache.jena.tdb.transaction.DatasetGraphTransaction;
+import org.apache.jena.tdb1.transaction.DatasetGraphTransaction;
 import org.apache.jena.update.UpdateAction;
 import org.apache.jena.update.UpdateFactory;
 import org.apache.jena.update.UpdateRequest;
@@ -369,7 +370,7 @@ public class ActionDatasets extends ActionContainerItem {
 
             if ( configurationFiles.isEmpty() ) {
                 // ---- Unmanaged
-                action.log.warn(format("[%d] Can't delete database configuration - not a managed database", action.id, name));
+                action.log.warn(format("[%d] Can't delete database configuration - not a managed database; dataset=%s", action.id, name));
 //                ServletOps.errorOccurred(format("Can't delete database - not a managed configuration", name));
                 systemDSG.commit();
                 committed = true;
@@ -399,7 +400,7 @@ public class ActionDatasets extends ActionContainerItem {
             // configuration file, so the databases will not be associated with the server
             // anymore.
 
-            boolean isTDB1 = org.apache.jena.tdb.sys.TDBInternal.isTDB1(dataService.getDataset());
+            boolean isTDB1 = org.apache.jena.tdb1.sys.TDBInternal.isTDB1(dataService.getDataset());
             boolean isTDB2 = org.apache.jena.tdb2.sys.TDBInternal.isTDB2(dataService.getDataset());
 
             // This occasionally fails in tests due to outstanding transactions.
@@ -416,7 +417,7 @@ public class ActionDatasets extends ActionContainerItem {
                 if ( Files.exists(pDatabase)) {
                     try {
                         if ( Files.isSymbolicLink(pDatabase)) {
-                            action.log.info(format("[%d] Database is a symbolic link, not removing files", action.id, pDatabase));
+                            action.log.info(format("[%d] Database is a symbolic link, not removing files %s", action.id, pDatabase));
                         } else {
                             IO.deleteAll(pDatabase);
                             action.log.info(format("[%d] Deleted database files %s", action.id, pDatabase));
@@ -431,7 +432,7 @@ public class ActionDatasets extends ActionContainerItem {
             // -- System database
             // Find graph associated with this dataset name.
             // (Statically configured databases aren't in the system database.)
-            Node n = NodeFactory.createLiteral(DataAccessPoint.canonical(name));
+            Node n = NodeFactory.createLiteralString(DataAccessPoint.canonical(name));
             Quad q = getOne(systemDSG, null, null, pServiceName.asNode(), n);
 //            if ( q == null )
 //                ServletOps.errorBadRequest("Failed to find dataset for '"+name+"'");
@@ -477,7 +478,7 @@ public class ActionDatasets extends ActionContainerItem {
 
         //action.log.info(format("[%d] Create database : name = %s, type = %s", action.id, dbName, dbType ));
 
-        String template = dbTypeToTemplate.get(dbType.toLowerCase(Locale.ROOT));
+        String template = dbTypeToTemplate.get(lowercase(dbType));
         if ( template == null )
             ServletOps.errorBadRequest(format("dbType can be only '%s', '%s' or '%s'", tDatabaseTDB, tDatabaseTDB2, tDatabaseMem));
 

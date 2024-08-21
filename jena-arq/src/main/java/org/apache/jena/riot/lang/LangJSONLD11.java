@@ -81,8 +81,7 @@ public class LangJSONLD11 implements ReaderRIOT {
     }
 
     private void handleJsonLdError(JsonLdError ex) {
-        if (ex.getCause() instanceof jakarta.json.stream.JsonParsingException) {
-            jakarta.json.stream.JsonParsingException exp = (jakarta.json.stream.JsonParsingException) (ex.getCause());
+        if (ex.getCause() instanceof jakarta.json.stream.JsonParsingException exp) {
             JsonLocation loc = exp.getLocation();
             errorHandler.error(ex.getMessage(), loc.getLineNumber(), loc.getColumnNumber());
         } else {
@@ -110,7 +109,7 @@ public class LangJSONLD11 implements ReaderRIOT {
         JsonLdOptions opts = getJsonLdOptions(baseURI, context);
         RdfDataset dataset = JsonLd.toRdf(document).options(opts).base(baseURI).get();
         extractPrefixes(document, output::prefix);
-        JenaTitanium.convert(dataset, output);
+        JenaTitanium.convert(dataset, profile, output);
     }
 
     /**

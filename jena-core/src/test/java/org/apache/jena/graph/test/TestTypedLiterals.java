@@ -18,8 +18,6 @@
 
 package org.apache.jena.graph.test;
 
-import static org.apache.jena.graph.NodeFactory.createLiteral;
-
 import java.math.BigDecimal ;
 import java.math.BigInteger ;
 import java.text.SimpleDateFormat ;
@@ -28,15 +26,12 @@ import java.util.* ;
 import junit.framework.TestCase ;
 import junit.framework.TestSuite ;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.jena.JenaRuntime ;
 import org.apache.jena.datatypes.BaseDatatype ;
 import org.apache.jena.datatypes.DatatypeFormatException ;
 import org.apache.jena.datatypes.RDFDatatype ;
 import org.apache.jena.datatypes.TypeMapper ;
 import org.apache.jena.datatypes.xsd.* ;
 import org.apache.jena.datatypes.xsd.impl.RDFLangString ;
-import org.apache.jena.datatypes.xsd.impl.XMLLiteralType ;
-import org.apache.jena.enhanced.EnhNode ;
 import org.apache.jena.graph.* ;
 import org.apache.jena.graph.impl.LiteralLabel ;
 import org.apache.jena.graph.impl.LiteralLabelFactory ;
@@ -64,9 +59,6 @@ public class TestTypedLiterals extends TestCase {
     }
     */
 
-    /**
-     * Boilerplate for junit
-     */
     public TestTypedLiterals( String name ) {
         super( name );
     }
@@ -81,7 +73,6 @@ public class TestTypedLiterals extends TestCase {
     /**
      * Test the base functioning of unknown datatypes
      */
-    @SuppressWarnings("deprecation")
     public void testUnknown() {
         String typeURI = "urn:x-hp-dt:unknown";
         String typeURI2 = "urn:x-hp-dt:unknown2";
@@ -110,7 +101,6 @@ public class TestTypedLiterals extends TestCase {
             assertTrue("Allowed int conversion", false);
         } catch (DatatypeFormatException e) {}
         assertEquals("Extract value", l1.getValue(), new BaseDatatype.TypedValue("foo", typeURI));
-        assertEquals("Extract xml tag", l1.isWellFormedXML(), false);
 
         JenaParameters.enableSilentAcceptanceOfUnknownDatatypes = false;
         boolean foundException = false;
@@ -131,7 +121,6 @@ public class TestTypedLiterals extends TestCase {
     /**
      * Tests the base functioning of a user defined datatype
      */
-    @SuppressWarnings("deprecation")
     public void testUserDef() {
         // Register the user defined type for rationals
         RDFDatatype rtype = RationalType.theRationalType;
@@ -159,16 +148,6 @@ public class TestTypedLiterals extends TestCase {
             l1.getInt();
             assertTrue("Allowed int conversion", false);
         } catch (DatatypeFormatException e) {}
-        assertEquals("Extract xml tag", l1.isWellFormedXML(), false);
-    }
-
-    public void testXMLLiteral() {
-//    	Literal ll = m.createLiteral("<bad",true);
-//    	assertTrue("Error checking must be off.",((EnhNode)ll).asNode().getLiteralIsXML());
-//		ll = m.createTypedLiteral("<bad/>",XMLLiteralType.theXMLLiteralType);
-//		assertFalse("Error checking must be on.",((EnhNode)ll).asNode().getLiteralIsXML());
-        Literal ll2 = m.createTypedLiteral("<good></good>",XMLLiteralType.theXMLLiteralType);
-		assertTrue("Well-formed XMLLiteral.",((EnhNode)ll2).asNode().getLiteralIsXML());
     }
 
     public void testRDFLangString_1() {
@@ -183,11 +162,7 @@ public class TestTypedLiterals extends TestCase {
         Literal ll1 = m.createTypedLiteral("abc", RDFLangString.rdfLangString) ;
         assertEquals("", ll1.getLanguage()) ;
         Literal ll2 = m.createLiteral("xyz", "en") ;
-
-        if ( JenaRuntime.isRDF11 )
-            assertTrue(ll1.getDatatype() == ll2.getDatatype()) ;
-        else
-            assertTrue(ll1.getDatatype() != ll2.getDatatype()) ;
+        assertTrue(ll1.getDatatype() == ll2.getDatatype()) ;
     }
 
     /**
@@ -378,20 +353,13 @@ public class TestTypedLiterals extends TestCase {
         assertSameValueAs("Null type = plain literal", lPlain, lPlain2);
         assertSameValueAs("Null type = plain literal", lPlain, lPlain3);
         assertSameValueAs("Null type = plain literal", lPlain2, lPlain3);
-        assertTrue("null type", lPlain3.getDatatype() == null);
+        assertEquals("null type mean xsd:string", XSDDatatype.XSDstring, lPlain3.getDatatype());
         assertDiffer("String != int", lString, lInt);
         assertDiffer("Plain != int", lPlain, lInt);
         assertDiffer("Plain != int", lPlain2, lInt);
 
-        // The correct answer to this is currently up to us
-        if (JenaParameters.enablePlainLiteralSameAsString) {
-            assertSameValueAs("String != plain??", lString, lPlain);
-            assertSameValueAs("String != plain??", lString, lPlain2);
-        } else {
-            assertDiffer("String != plain??", lString, lPlain);
-            assertDiffer("String != plain??", lString, lPlain2);
-        }
-
+        assertSameValueAs("String != plain??", lString, lPlain);
+        assertSameValueAs("String != plain??", lString, lPlain2);
     }
 
     /**
@@ -465,18 +433,19 @@ public class TestTypedLiterals extends TestCase {
     }
 
     /**
-     * Test case for a bug in retrieving a value like 3.00 from
-     * a probe like 3.0
+     * Test case for retrieving a value like 3.00 from
+     * a probe like 3.0. This test is value sensitive.
      */
     public void testDecimalFind() {
+        Graph graph = GraphMemFactory.createDefaultGraphSameValue();
         RDFDatatype dt = XSDDatatype.XSDdecimal;
         Node ns = NodeFactory.createURI("x") ;
         Node np = NodeFactory.createURI("p") ;
         Node nx1 = NodeFactory.createLiteral("0.50", dt) ;
         Node nx2 = NodeFactory.createLiteral("0.500", dt) ;
-        Graph graph = GraphMemFactory.createDefaultGraph() ;
-        graph.add(Triple.create(ns, np, nx1)) ;
+        graph.add(ns, np, nx1) ;
         assertTrue( graph.find(Node.ANY, Node.ANY, nx2).hasNext() );
+        assertTrue( graph.find(ns, np, nx2).hasNext() );
     }
 
     /**
@@ -494,7 +463,7 @@ public class TestTypedLiterals extends TestCase {
 
     /**
      * Helper for testDecimalCannonicalize. Run a single
-     * cannonicalization test on a value specified in string form.
+     * canonicalization test on a value specified in string form.
      */
     private void doTestDecimalCanonicalize(String value, String expected, Class<?> expectedClass) {
         Object normalized = XSDDatatype.XSDdecimal.cannonicalise( new BigDecimal(value) );
@@ -639,7 +608,7 @@ public class TestTypedLiterals extends TestCase {
             calM1.set(Calendar.MONTH, 10);
             calM1.set(Calendar.DATE,  23);
             XSDDateTime xdtM = new XSDDateTime(calM1);
-            LiteralLabel xdtM_ll = LiteralLabelFactory.createByValue(xdtM, "", XSDDatatype.XSDdateTime);
+            LiteralLabel xdtM_ll = LiteralLabelFactory.createByValue(xdtM, XSDDatatype.XSDdateTime);
 
             assertTrue("Pre-1000 calendar value", xdtM_ll.isWellFormed()) ;
             assertTrue("Pre-1000 calendar value", xdtM_ll.getLexicalForm().matches("^[0-9]{4}-.*")) ;
@@ -949,6 +918,9 @@ public class TestTypedLiterals extends TestCase {
     public void testBinary4() {
         Literal la = m.createTypedLiteral("GpM7", XSDDatatype.XSDbase64Binary);
         Literal lb = m.createTypedLiteral("GpM7", XSDDatatype.XSDbase64Binary);
+
+        la.sameValueAs(lb);
+
         assertTrue("equality test", la.sameValueAs(lb));
 
         data = new byte[] {15, (byte)0xB7};
@@ -1004,7 +976,7 @@ public class TestTypedLiterals extends TestCase {
      */
     public void testDateTimeBug3() {
         final String testLex = "-0001-02-03T04:05:06";
-        Node n = createLiteral(testLex, XSDDatatype.XSDdateTime);
+        Node n = NodeFactory.createLiteral(testLex, XSDDatatype.XSDdateTime);
         assertEquals("Got wrong XSDDateTime representation!", testLex, n.getLiteralValue().toString());
     }
 
@@ -1141,20 +1113,6 @@ public class TestTypedLiterals extends TestCase {
         }
         JenaParameters.enableEagerLiteralValidation = originalFlag;
         assertTrue("Early datatype format exception", foundException);
-
-        if ( ! JenaRuntime.isRDF11 ) {
-            // RDF 1.1 -  Simple Literals are identical terms to xsd:string hence same value always.
-            originalFlag = JenaParameters.enablePlainLiteralSameAsString;
-            Literal l1 = m.createLiteral("test string");
-            Literal l2 = m.createTypedLiteral("test string", XSDDatatype.XSDstring);
-            JenaParameters.enablePlainLiteralSameAsString = true;
-            boolean ok1 = l1.sameValueAs(l2);
-            JenaParameters.enablePlainLiteralSameAsString = false;
-            boolean ok2 = ! l1.sameValueAs(l2);
-            JenaParameters.enablePlainLiteralSameAsString = originalFlag;
-            assertTrue( ok1 );
-            assertTrue( ok2 );
-        }
     }
 
     /**
@@ -1419,13 +1377,18 @@ class Rational {
         return "rational[" + numerator + "/" + denominator + "]";
     }
 
-    /**
-     * Equality check
-     */
     @Override
-    public boolean equals(Object o) {
-        if (o == null || !(o instanceof Rational)) return false;
-        Rational or = (Rational)o;
-        return (numerator == or.numerator && denominator == or.denominator);
+    public int hashCode() {
+        return Objects.hash(denominator, numerator);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if ( this == obj )
+            return true;
+        if ( !(obj instanceof Rational) )
+            return false;
+        Rational other = (Rational)obj;
+        return denominator == other.denominator && numerator == other.numerator;
     }
 }

@@ -35,10 +35,10 @@ public class VarExprList {
     private List<Var> vars;
     private LinkedHashMap<Var, Expr> exprs;   // Preserve order.
 
-    public VarExprList(List<Var> vars) {
-        this.vars = new ArrayList<>(vars);
-        this.exprs = new LinkedHashMap<>();
-    }
+//    public VarExprList(List<Var> vars) {
+//        this.vars = new ArrayList<>(vars);
+//        this.exprs = new LinkedHashMap<>();
+//    }
 
     public VarExprList(VarExprList other) {
         this.vars = new ArrayList<>(other.vars);
@@ -183,10 +183,9 @@ public class VarExprList {
     public boolean equals(Object other) {
         if ( this == other )
             return true;
-        if ( !(other instanceof VarExprList) )
+        if ( !(other instanceof VarExprList varExprList) )
             return false;
-        VarExprList x = (VarExprList)other;
-        return Objects.equals(vars, x.vars) && Objects.equals(exprs, x.exprs);
+        return Objects.equals(vars, varExprList.vars) && Objects.equals(exprs, varExprList.exprs);
     }
 
     @Override

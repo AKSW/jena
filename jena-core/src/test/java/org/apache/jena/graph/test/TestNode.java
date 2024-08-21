@@ -21,7 +21,6 @@ package org.apache.jena.graph.test;
 
 import junit.framework.TestSuite ;
 
-import org.apache.jena.JenaRuntime ;
 import org.apache.jena.atlas.lib.Creator;
 import org.apache.jena.datatypes.RDFDatatype ;
 import org.apache.jena.datatypes.TypeMapper ;
@@ -48,8 +47,8 @@ public class TestNode extends GraphTestBase
 
     private static final String U = "http://some.domain.name/magic/spells.incant";
     private static final String N = "Alice";
-    private static final LiteralLabel L = LiteralLabelFactory.create( "ashes are burning", "en", false );
-    private static final BlankNodeId A = BlankNodeId.create();
+    private static final LiteralLabel L = LiteralLabelFactory.createLang( "ashes are burning", "en" );
+    private static final String A = BlankNodeId.createFreshId();
 
     public void testBlanks()
     {
@@ -57,7 +56,7 @@ public class TestNode extends GraphTestBase
         assertFalse( "anonymous nodes aren't literal", NodeFactory.createBlankNode().isLiteral() );
         assertFalse( "anonymous nodes aren't URIs", NodeFactory.createBlankNode().isURI() );
         assertFalse( "anonymous nodes aren't variables", NodeFactory.createBlankNode().isVariable() );
-        assertEquals( "anonymous nodes have the right id", NodeFactory.createBlankNode(A).getBlankNodeId(), A );
+        assertEquals( "anonymous nodes have the right id", NodeFactory.createBlankNode(A).getBlankNodeLabel(), A);
     }
 
     @SuppressWarnings("deprecation")
@@ -117,11 +116,11 @@ public class TestNode extends GraphTestBase
     @SuppressWarnings("deprecation")
     private Object [][] eqTestCases()
     {
-        BlankNodeId id = BlankNodeId.create();
-        LiteralLabel L2 = LiteralLabelFactory.create( id.toString(), "", false );
+        String id = BlankNodeId.createFreshId();
+        LiteralLabel L2 = LiteralLabelFactory.createString(id.toString());
 
-        LiteralLabel LLang1 = LiteralLabelFactory.createByValue( "xyz", "en", null) ;
-        LiteralLabel LLang2 = LiteralLabelFactory.createByValue( "xyz", "EN", null) ;
+        LiteralLabel LLang1 = LiteralLabelFactory.createLang( "xyz", "en") ;
+        LiteralLabel LLang2 = LiteralLabelFactory.createLang( "xyz", "EN") ;
 
         String U2 = id.toString();
         String N2 = id.toString();
@@ -197,9 +196,9 @@ public class TestNode extends GraphTestBase
     @SuppressWarnings("deprecation")
     public void testLabels()
     {
-        BlankNodeId id = BlankNodeId.create();
+        String id = BlankNodeId.createFreshId();
         assertEquals( "get URI value", U, NodeFactory.createURI( U ).getURI() );
-        assertEquals( "get blank value", id, NodeFactory.createBlankNode( id ).getBlankNodeId() );
+        assertEquals( "get blank value", id, NodeFactory.createBlankNode( id ).getBlankNodeLabel() );
         assertEquals( "get literal value", L, NodeFactory.createLiteral( L ).getLiteral() );
         assertEquals( "get variable name", N, NodeFactory.createVariable( N ).getName() );
     }
@@ -237,7 +236,7 @@ public class TestNode extends GraphTestBase
     }
 
     public void testGetBlankNodeIdFails( Node n )
-    { try { n.getBlankNodeId(); fail( n.getClass() + " should fail getName()" ); } catch (UnsupportedOperationException e) {} }
+    { try { n.getBlankNodeLabel(); fail( n.getClass() + " should fail getName()" ); } catch (UnsupportedOperationException e) {} }
 
     public void testGetURIFails( Node n )
     { try { n.getURI(); fail( n.getClass() + " should fail getURI()" ); } catch (UnsupportedOperationException e) {} }
@@ -252,15 +251,13 @@ public class TestNode extends GraphTestBase
     public void testGetBlankNodeLabelString()
     {
         Node n = NodeFactory.createBlankNode();
-        assertEquals( n.getBlankNodeId().getLabelString(), n.getBlankNodeLabel() );
+        assertNotNull(n.getBlankNodeLabel());
     }
 
     public void testVariableSupport()
     {
-        assertEquals( Node_Variable.variable( "xxx" ), Node_Variable.variable( "xxx" ) );
-        assertDiffer( Node_Variable.variable( "xxx" ), Node_Variable.variable( "yyy" ) );
-        assertEquals( Node_Variable.variable( "aaa" ), Node_Variable.variable( "aaa" ) );
-        assertDiffer( Node_Variable.variable( "aaa" ), Node_Variable.variable( "yyy" ) );
+        assertEquals( new Node_Variable( "xxx" ), new Node_Variable( "xxx" ) );
+        assertDiffer( new Node_Variable( "xxx" ), new Node_Variable( "yyy" ) );
     }
 
     /**
@@ -280,11 +277,13 @@ public class TestNode extends GraphTestBase
      */
     public void testCreateBlankNode()
     {
-        String idA = "_xxx", idB = "_yyy";
-        Node a = NodeCreateUtils.create( idA ), b = NodeCreateUtils.create( idB );
+        String idA = "_xxx";
+        String idB = "_yyy";
+        Node a = NodeCreateUtils.create( idA );
+        Node b = NodeCreateUtils.create( idB );
         assertTrue( "both must be bnodes", a.isBlank() && b.isBlank() );
-        assertEquals( BlankNodeId.create( idA ), a.getBlankNodeId() );
-        assertEquals( BlankNodeId.create( idB ), b.getBlankNodeId() );
+        assertEquals( NodeFactory.createBlankNode( idA ).getBlankNodeLabel(), a.getBlankNodeLabel() );
+        assertEquals( NodeFactory.createBlankNode( idB ).getBlankNodeLabel(), b.getBlankNodeLabel() );
     }
 
     public void testCreateVariable()
@@ -355,7 +354,8 @@ public class TestNode extends GraphTestBase
         Node n1 = NodeCreateUtils.create( "'chat'en-UK" );
         Node n2 = NodeCreateUtils.create( "'chat'EN-UK" );
         assertTrue( n1.sameValueAs(n2) ) ;
-        assertFalse( n1.equals(n2) ) ;
+        // Jena5: normalized language tags.
+        assertTrue( n1.equals(n2) ) ;
     }
 
     public void testCreateLanguagedLiteralXY()
@@ -419,7 +419,7 @@ public class TestNode extends GraphTestBase
         testCreateURI( "dc:creator", DC.getURI() + "creator" );
         testCreateURI( "rss:something", RSS.getURI() + "something" );
         testCreateURI( "vcard:TITLE", VCARD.getURI() + "TITLE" );
-        testCreateURI( "owl:wol", OWL.NAMESPACE + "wol" );
+        testCreateURI( "owl:wol", OWL.NAMESPACE.getURI() + "wol" );
     }
 
     public void testCreateURIOtherMap()
@@ -446,7 +446,7 @@ public class TestNode extends GraphTestBase
     public void testCreatePrefixed()
     {
         PrefixMapping pm = PrefixMapping.Factory.create();
-        /* TODO Node n = */ NodeCreateUtils.create( pm, "xyz" );
+        NodeCreateUtils.create( pm, "xyz" );
     }
 
     public void testToStringWithPrefixMapping()
@@ -474,9 +474,9 @@ public class TestNode extends GraphTestBase
             @Override
             public Object visitAny( Node_ANY it ) { return it; }
             @Override
-            public Object visitBlank( Node_Blank it, BlankNodeId id ) { return it; }
+            public Object visitBlank( Node_Blank it, String id ) { return it; }
             @Override
-            public Object visitLiteral( Node_Literal it, LiteralLabel lit ) { return it; }
+            public Object visitLiteral( Node_Literal it, String lex, String lang, RDFDatatype dtype) { return it; }
             @Override
             public Object visitURI( Node_URI it, String uri ) { return it; }
             @Override
@@ -510,7 +510,7 @@ public class TestNode extends GraphTestBase
         Node s = node( "uri1" );
         Node p = node( "uri2" );
         Node o = node( "uri1" );
-        Node_Triple nt = new Node_Triple(s, p, o);
+        Node nt = NodeFactory.createTripleNode(s, p, o);
         nt.visitWith(nv);
         // ---
         Graph g = GraphMemFactory.empty();
@@ -526,11 +526,16 @@ public class TestNode extends GraphTestBase
             public Object visitAny( Node_ANY it )
             { return null; }
             @Override
-            public Object visitBlank( Node_Blank it, BlankNodeId id )
-            { assertTrue( it.getBlankNodeId() == id ); return null; }
+            public Object visitBlank( Node_Blank it, String label )
+            { assertTrue( it.getBlankNodeLabel() == label ); return null; }
             @Override
-            public Object visitLiteral( Node_Literal it, LiteralLabel lit )
-            { assertTrue( it.getLiteral() == lit ); return null; }
+            public Object visitLiteral( Node_Literal it, String lex, String lang, RDFDatatype dtype) {
+                assertEquals(lex, it.getLiteralLexicalForm());
+                assertEquals(lang, it.getLiteralLanguage());
+                assertEquals(dtype, it.getLiteralDatatype());
+                return null;
+            }
+
             @Override
             public Object visitURI( Node_URI it, String uri )
             { assertTrue( it.getURI() == uri ); return null; }
@@ -560,10 +565,10 @@ public class TestNode extends GraphTestBase
             public Object visitAny( Node_ANY it )
             { strings[0] += " any"; return null; }
             @Override
-            public Object visitBlank( Node_Blank it, BlankNodeId id )
+            public Object visitBlank( Node_Blank it, String id )
             { strings[0] += " blank"; return null; }
             @Override
-            public Object visitLiteral( Node_Literal it, LiteralLabel lit )
+            public Object visitLiteral( Node_Literal it, String lex, String lang, RDFDatatype dtype)
             { strings[0] += " literal"; return null; }
             @Override
             public Object visitURI( Node_URI it, String uri )
@@ -617,13 +622,12 @@ public class TestNode extends GraphTestBase
     {
         TypeMapper tm = TypeMapper.getInstance();
         RDFDatatype dtInt = tm.getTypeByValue( Integer.valueOf( 10 ) );
-        Node plain = NodeFactory.createLiteral( "rhubarb", "");
-        Node english = NodeFactory.createLiteral( "eccentric", "en_UK");
+        Node plain = NodeFactory.createLiteralLang( "rhubarb", "");
+        Node english = NodeFactory.createLiteralLang( "eccentric", "en-UK");
         Node typed = NodeFactory.createLiteral( "10", dtInt );
         assertEquals( "\"rhubarb\"", plain.toString() );
-        assertEquals( "rhubarb", plain.toString( false ) );
-        assertEquals( "\"eccentric\"@en_UK", english.toString() );
-        assertEquals( "10^^http://www.w3.org/2001/XMLSchema#int", typed.toString( false ) );
+        assertEquals( "\"eccentric\"@en-UK", english.toString() );
+        assertEquals( "\"10\"^^xsd:int", typed.toString() );
     }
 
     public void testGetIndexingValueURI()
@@ -682,16 +686,6 @@ public class TestNode extends GraphTestBase
     public void testGetLiteralDatatypePlainString()
     {
         assertString(NodeCreateUtils.create( "'plain'" )) ;
-    }
-
-    @SuppressWarnings("deprecation")
-    public void testLiteralIsXML()
-    {
-        assertFalse( NodeCreateUtils.create( "'notXML'" ).getLiteralIsXML() );
-        assertFalse( NodeCreateUtils.create( "17" ).getLiteralIsXML() );
-        assertFalse( NodeCreateUtils.create( "'joke'xsd:Joke" ).getLiteralIsXML() );
-        assertTrue( NodeFactory.createLiteral( "lit", "lang", true ).getLiteralIsXML() );
-        assertFalse( NodeFactory.createLiteral( "lit", "lang", false ).getLiteralIsXML() );
     }
 
     public void testConcrete()
@@ -758,19 +752,13 @@ public class TestNode extends GraphTestBase
     private static void assertString(Node n) {
         RDFDatatype dt = n.getLiteralDatatype() ;
         assertEquals("", n.getLiteralLanguage() ) ;
-        if ( JenaRuntime.isRDF11 )
-            assertEquals(XSDDatatype.XSDstring, dt) ;
-        else
-            assertEquals(null, dt) ;
+        assertEquals(XSDDatatype.XSDstring, dt) ;
     }
 
     private static void assertLangString(Node n) {
         RDFDatatype dt = n.getLiteralDatatype() ;
         assertDiffer("", n.getLiteralLanguage() ) ;    // "" is not legal.
-        if ( JenaRuntime.isRDF11 )
-            assertEquals(RDF.dtLangString, dt) ;
-        else
-            assertEquals(null, dt) ;
+        assertEquals(RDF.dtLangString, dt) ;
     }
 
     /**

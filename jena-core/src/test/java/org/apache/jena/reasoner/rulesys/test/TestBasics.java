@@ -108,6 +108,10 @@ public class TestBasics extends TestCase  {
         execTest("(?a rdf:type max(?a,1)) -> (?a rdf:type 'foo').",
                  "[ (?a rdf:type 'max(?a \\'1\\'^^http://www.w3.org/2001/XMLSchema#int)'^^"+uri+") -> (?a rdf:type 'foo') ]");
         TypeMapper.getInstance().unregisterDatatype(dt);
+
+        //junit.framework.AssertionFailedError: expected:
+        // <[ (?a rdf:type 'max(?a \'1\'^^http://www.w3.org/2001/XMLSchema#int)'^^urn:x-hp-jena:Functor) -> (?a rdf:type 'foo') ]>
+        // <[ (?a rdf:type 'max(?a \'1\'^^http://www.w3.org/2001/XMLSchema#int)'^^urn:x-hp-jena:Functor) -> (?a rdf:type 'foo') ]>
     }
 
     public void testParser04() {
@@ -236,6 +240,8 @@ public class TestBasics extends TestCase  {
         try {
             // And run on expected
             Rule r2 = Rule.parseRule(expected);
+            r.equals(r2);
+
             assertEquals(r, r2);
         } catch (Rule.ParserException ex) {
             System.err.println(expected);
@@ -514,14 +520,11 @@ public class TestBasics extends TestCase  {
         Resource foo = infModel.createResource(PrintUtil.egNS + "foo");
         Resource bar = infModel.createResource(PrintUtil.egNS + "bar");
 
-        RDFNode flit = infModel.getResource(R1.getURI()).getRequiredProperty(rbr).getObject();
-        assertNotNull(flit);
-        assertEquals(flit.toString(), "allOK");
-//        assertTrue(flit instanceof Literal);
-//        Functor func = (Functor)((Literal)flit).getValue();
-//        assertEquals("all", func.getName());
-//        assertEquals(p.getNode(), func.getArgs()[0]);
-//        assertEquals(D.getNode(), func.getArgs()[1]);
+        RDFNode fLit = infModel.getResource(R1.getURI()).getRequiredProperty(rbr).getObject();
+        assertNotNull(fLit);
+        assertTrue(fLit.isLiteral());
+        String strflit = fLit.asLiteral().getLexicalForm();
+        assertEquals("allOK", strflit);
 
         Literal one = (Literal)foo.getRequiredProperty(propbar).getObject();
         assertEquals(Integer.valueOf(1), one.getValue());

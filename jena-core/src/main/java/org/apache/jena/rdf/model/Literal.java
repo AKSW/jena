@@ -163,26 +163,24 @@ public interface Literal extends RDFNode {
 
     /**
      * If the literal is interpretable as a string return its value.
-     * For typed literals this will throw an error for non string
-     * literals and one needs to use getLexicalForm to return the
-     * string form of other datatypes.
      *
-     * @return the literal string
+     * @return the literal string or its lexical value
      */
     public String getString() ;
 
     /**
-         If a language is defined for this literal return it
-         @return the language for this literal if it exists, or empty string if none
-    */
+     * If a language is defined for this literal return it
+     *
+     * @return the language for this literal if it exists, or empty string if none
+     */
     public String getLanguage();
 
     /**
-        Answer true iff this literal is (or claims to be) well-formed XML.
-        @deprecated To be removed. Well-formness of XML literal is not tested for.
+     * If a text direction is defined for this literal return it
+     *
+     * @return the text direction for this literal if it exists, or null if none
      */
-    @Deprecated
-    public boolean isWellFormedXML();
+    public String getTextDirection();
 
     /** Test whether another object is equal to this object.
      *

@@ -17,13 +17,14 @@
  */
 package org.apache.jena.geosparql.spatial.serde;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.sedona.common.geometrySerde.GeometrySerde;
+import org.apache.sedona.common.geometrySerde.SpatialIndexSerde;
+import org.locationtech.jts.index.strtree.STRtree;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.sedona.core.geometryObjects.GeometrySerde;
-import org.apache.sedona.core.geometryObjects.SpatialIndexSerde;
-import org.locationtech.jts.index.strtree.STRtree;
 
 public class CustomSpatialIndexSerde extends SpatialIndexSerde {
     public CustomSpatialIndexSerde(GeometrySerde geometrySerde) {

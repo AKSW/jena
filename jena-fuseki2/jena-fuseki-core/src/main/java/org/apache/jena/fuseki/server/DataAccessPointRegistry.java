@@ -21,7 +21,7 @@ package org.apache.jena.fuseki.server;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.jena.atlas.lib.Registry;
@@ -69,16 +69,6 @@ public class DataAccessPointRegistry extends Registry<String, DataAccessPoint>
         // Make a copy for safety.
         forEach((_name, accessPoint) -> accessPoints.add(accessPoint));
         return accessPoints;
-    }
-
-    /**
-     *  @deprecated Use {@link #register(DataAccessPoint)}.
-     * This method ignores the accessPointName argument.
-     */
-    @Override
-    @Deprecated
-    public void put(String accessPointName, DataAccessPoint dap) {
-        register(dap);
     }
 
     @Override

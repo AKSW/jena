@@ -38,19 +38,23 @@ import org.apache.jena.sparql.util.Context ;
 import org.apache.jena.sparql.util.MappingRegistry ;
 import org.apache.jena.sparql.util.Symbol ;
 import org.apache.jena.sys.JenaSystem ;
-import org.apache.jena.tdb.assembler.AssemblerTDB ;
-import org.apache.jena.tdb.modify.UpdateEngineTDB ;
-import org.apache.jena.tdb.setup.DatasetBuilderStd ;
-import org.apache.jena.tdb.solver.QueryEngineTDB ;
-import org.apache.jena.tdb.solver.StageGeneratorDirectTDB ;
-import org.apache.jena.tdb.store.DatasetGraphTDB ;
-import org.apache.jena.tdb.sys.EnvTDB ;
-import org.apache.jena.tdb.sys.SystemTDB ;
-import org.apache.jena.tdb.sys.TDBInternal;
-import org.apache.jena.tdb.transaction.DatasetGraphTransaction ;
+import org.apache.jena.tdb1.assembler.AssemblerTDB;
+import org.apache.jena.tdb1.modify.UpdateEngineTDB;
+import org.apache.jena.tdb1.setup.DatasetBuilderStd;
+import org.apache.jena.tdb1.solver.QueryEngineTDB;
+import org.apache.jena.tdb1.solver.StageGeneratorDirectTDB;
+import org.apache.jena.tdb1.store.DatasetGraphTDB;
+import org.apache.jena.tdb1.sys.EnvTDB;
+import org.apache.jena.tdb1.sys.SystemTDB;
+import org.apache.jena.tdb1.sys.TDBInternal;
+import org.apache.jena.tdb1.transaction.DatasetGraphTransaction;
 import org.slf4j.Logger ;
 import org.slf4j.LoggerFactory ;
 
+/**
+ * @deprecated Use {@link org.apache.jena.tdb1.TDB1}
+ */
+@Deprecated
 public class TDB {
 
     private TDB() {}
@@ -133,14 +137,12 @@ public class TDB {
 
     /** Sync a TDB-backed Model. Do nothing if not TDB-backed. */
     public static void sync(Model model) {
-        if ( model instanceof OntModelImpl ) {
-            OntModelImpl ontModel = (OntModelImpl)model ;
+        if ( model instanceof OntModelImpl ontModel ) {
             sync(ontModel.getBaseGraph()) ;
             return ;
         }
         // This never happens (there is only one OntModel implementation)
-        if ( model instanceof OntModel ) {
-            OntModel ontModel = (OntModel)model ;
+        if ( model instanceof OntModel ontModel ) {
             sync(ontModel.getBaseModel()) ;
             return ;
         }
@@ -153,8 +155,7 @@ public class TDB {
         if ( graph == null )
             return ;
 
-        if ( graph instanceof InfGraph ) {
-            InfGraph infGraph = (InfGraph)graph ;
+        if ( graph instanceof InfGraph infGraph ) {
             sync(infGraph.getRawGraph()) ;
             return ;
         }
@@ -180,11 +181,10 @@ public class TDB {
             return ;
         }
 
-        if ( dataset instanceof DatasetGraphTransaction ) {
-            DatasetGraphTransaction dsgt = (DatasetGraphTransaction)dataset ;
+        if ( dataset instanceof DatasetGraphTransaction dsgtxn ) {
             // This only sync if the dataset has not been used transactionally.
             // Can't sync transactional datasets (it's meaningless)
-            dsgt.syncIfNotTransactional() ;
+            dsgtxn.syncIfNotTransactional() ;
             return ;
         }
 
@@ -208,8 +208,8 @@ public class TDB {
     private static void syncObject(Object object) {
         if ( object == null )
             return ;
-        if ( object instanceof Sync )
-            ((Sync)object).sync() ;
+        if ( object instanceof Sync syncObj )
+            syncObj.sync() ;
     }
 
     /** The root package name for TDB */

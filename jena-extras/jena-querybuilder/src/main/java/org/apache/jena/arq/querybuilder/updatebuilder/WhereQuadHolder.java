@@ -17,9 +17,11 @@
  */
 package org.apache.jena.arq.querybuilder.updatebuilder;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import org.apache.jena.arq.querybuilder.AbstractQueryBuilder;
 import org.apache.jena.arq.querybuilder.Converters;
@@ -53,6 +55,12 @@ public class WhereQuadHolder implements QuadHolder {
 
     private Element whereClause;
     private final PrefixHandler prefixHandler;
+    
+    
+    private static Predicate<Node> checkPredicate = n -> n.isURI() || n.isVariable() ||n.equals(Node.ANY);
+    
+    private static Predicate<Node> checkSubject = n -> checkPredicate.test(n) || n.isBlank() || n.isNodeTriple();
+
 
     /**
      * Constructor.
@@ -154,19 +162,9 @@ public class WhereQuadHolder implements QuadHolder {
      */
     private static void testTriple(TriplePath t) {
         // verify Triple is valid
-        boolean validSubject = t.getSubject().isURI() || t.getSubject().isBlank() || t.getSubject().isVariable()
-                || t.getSubject().equals(Node.ANY);
-        boolean validPredicate;
-
-        if (t.isTriple()) {
-            validPredicate = t.getPredicate().isURI() || t.getPredicate().isVariable()
-                    || t.getPredicate().equals(Node.ANY);
-        } else {
-            validPredicate = t.getPath() != null;
-        }
-
-        boolean validObject = t.getObject().isURI() || t.getObject().isLiteral() || t.getObject().isBlank()
-                || t.getObject().isVariable() || t.getObject().equals(Node.ANY);
+        boolean validSubject = checkSubject.test(t.getSubject());
+        boolean validPredicate = t.isTriple() ? checkPredicate.test(t.getPredicate()) : t.getPath() != null;
+        boolean validObject = checkSubject.test(t.getObject()) || t.getObject().isLiteral();
 
         if (!validSubject || !validPredicate || !validObject) {
             StringBuilder sb = new StringBuilder();
@@ -222,6 +220,17 @@ public class WhereQuadHolder implements QuadHolder {
     }
 
     /**
+     * Add a {@code TriplePath} collection to the where clause
+     *
+     * @param t The triple path to add.
+     * @throws IllegalArgumentException If the triple path is not a valid triple
+     * path for a where clause.
+     */
+    public void addWhere(Collection<TriplePath> t) throws IllegalArgumentException {
+        t.forEach(this::addWhere);
+    }
+    
+    /**
      * Add an optional triple to the where clause
      *
      * @param t The triple path to add.
@@ -232,6 +241,20 @@ public class WhereQuadHolder implements QuadHolder {
         testTriple(t);
         ElementPathBlock epb = new ElementPathBlock();
         epb.addTriple(t);
+        ElementOptional opt = new ElementOptional(epb);
+        getClause().addElement(opt);
+    }
+    
+    /**
+     * Add an optional TriplePath to the where clause
+     *
+     * @param t The triple path to add.
+     * @throws IllegalArgumentException If the triple is not a valid triple for a
+     * where clause.
+     */
+    public void addOptional(Collection<TriplePath> t) throws IllegalArgumentException {
+        ElementPathBlock epb = new ElementPathBlock();
+        t.forEach( tp -> {testTriple(tp);epb.addTriple(tp);});
         ElementOptional opt = new ElementOptional(epb);
         getClause().addElement(opt);
     }
@@ -379,7 +402,9 @@ public class WhereQuadHolder implements QuadHolder {
      *
      * @param objs the list of objects for the list.
      * @return the first blank node in the list.
+     * @deprecated use {@code Converters.makeCollection(List.of(Object...))}
      */
+    @Deprecated(since="5.0.0")
     public Node list(Object... objs) {
         Node retval = NodeFactory.createBlankNode();
         Node lastObject = retval;

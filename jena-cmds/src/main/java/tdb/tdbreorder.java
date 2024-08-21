@@ -34,7 +34,7 @@ import org.apache.jena.sparql.engine.optimizer.reorder.ReorderTransformationSubs
 import org.apache.jena.sparql.serializer.SerializationContext;
 import org.apache.jena.sparql.sse.SSE;
 import org.apache.jena.sparql.sse.writers.WriterNode;
-import org.apache.jena.tdb.sys.Names;
+import org.apache.jena.tdb1.sys.Names;
 
 public class tdbreorder {
     public static void main(String...args) {
@@ -56,10 +56,10 @@ public class tdbreorder {
         Op op = SSE.readOp(pattern);
 
         BasicPattern bgp;
-        if ( op instanceof OpQuadPattern ) {
-            bgp = ((OpQuadPattern)op).getBasicPattern();
-        } else if ( op instanceof OpBGP ) {
-            bgp = ((OpBGP)op).getPattern();
+        if ( op instanceof OpQuadPattern opq ) {
+            bgp = opq.getBasicPattern();
+        } else if ( op instanceof OpBGP opbgp) {
+            bgp = opbgp.getPattern();
         } else {
             System.err.println("Not a quad or triple pattern");
             System.exit(2);

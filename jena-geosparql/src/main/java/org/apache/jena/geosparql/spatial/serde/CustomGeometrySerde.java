@@ -17,14 +17,10 @@
  */
 package org.apache.jena.geosparql.spatial.serde;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Registration;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import org.apache.jena.graph.Node;
 import org.apache.sedona.common.geometryObjects.Circle;
+import org.apache.sedona.common.geometrySerde.GeometrySerde;
 import org.apache.sedona.core.formatMapper.shapefileParser.parseUtils.shp.ShapeSerde;
-import org.apache.sedona.core.geometryObjects.GeometrySerde;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryCollection;
@@ -35,6 +31,11 @@ import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
+import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.Output;
 
 
 /**

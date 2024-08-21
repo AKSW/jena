@@ -33,10 +33,11 @@ import org.apache.jena.atlas.logging.Log ;
 final public class CacheCaffeine<K,V> implements Cache<K, V>
 {
     private static boolean WITH_STATS = false;
-
     private BiConsumer<K, V> dropHandler = null ;
 
     private com.github.benmanes.caffeine.cache.Cache<K,V> cache ;
+    // cache size specified on creation.
+    private final int size;
 
     public CacheCaffeine(int size) {
         this(size, null);
@@ -46,7 +47,7 @@ final public class CacheCaffeine<K,V> implements Cache<K, V>
         @SuppressWarnings("unchecked")
         Caffeine<K,V> builder = (Caffeine<K,V>)Caffeine.newBuilder()
             .maximumSize(size)
-            .initialCapacity(size/2)
+            .initialCapacity(size/4)
             // Eviction immediately using the caller thread.
             .executor(c->c.run());
 
@@ -60,10 +61,12 @@ final public class CacheCaffeine<K,V> implements Cache<K, V>
         if ( WITH_STATS )
             builder = builder.recordStats();
         cache = builder.build();
+        this.size = size;
     }
 
     public CacheCaffeine(com.github.benmanes.caffeine.cache.Cache<K,V> caffeine) {
         cache = caffeine;
+        this.size = -1;     // Unknown
     }
 
     @Override

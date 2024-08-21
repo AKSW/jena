@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.apache.jena</groupId>
     <artifactId>jena</artifactId>
-    <version>4.9.0</version>
+    <version>5.0.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -40,14 +40,14 @@
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-core</artifactId>
-      <version>4.9.0</version>
+      <version>5.0.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-core</artifactId>
       <classifier>tests</classifier>
-      <version>4.9.0</version>
+      <version>5.0.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
 
@@ -55,16 +55,9 @@
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-base</artifactId>
       <classifier>tests</classifier>
-      <version>4.9.0</version>
+      <version>5.0.0-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
-
-    <!-- jsonld-java for JSON-LD 1.0 -->
-    <dependency>
-      <groupId>com.github.jsonld-java</groupId>
-      <artifactId>jsonld-java</artifactId>
-    </dependency>
-    <!-- replace that used via jsonld-java -->
 
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -72,31 +65,9 @@
     </dependency>    
 
     <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient-cache</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient</artifactId>
-    </dependency>
-    <!--
-        Intercept any uses of Jakarta Commons Logging
-         e.g. Apache Common HTTP client (JSON-LD 1.0 support)
-    -->
-    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-    </dependency>
-
-    <!-- End jsonld-java -->
 
     <!-- For Titanium JSON-LD 1.1 -->
     <dependency>
@@ -146,12 +117,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.python</groupId>
-      <artifactId>jython-standalone</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -165,7 +130,7 @@
 
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
       <scope>test</scope>
     </dependency>
 

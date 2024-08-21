@@ -68,10 +68,6 @@ import org.apache.jena.web.HttpSC;
  */
 public class QueryExecHTTP implements QueryExec {
 
-    /** @deprecated Use {@link #newBuilder} */
-    @Deprecated
-    public static QueryExecHTTPBuilder create() { return newBuilder() ; }
-
     public static QueryExecHTTPBuilder newBuilder() { return QueryExecHTTPBuilder.create(); }
 
     public static QueryExecHTTPBuilder service(String serviceURL) {
@@ -149,6 +145,11 @@ public class QueryExecHTTP implements QueryExec {
         this.readTimeout = timeout;
         this.readTimeoutUnit = timeoutUnit;
         this.httpClient = HttpLib.dft(httpClient, HttpEnv.getDftHttpClient());
+    }
+
+    /** Getter for the appProvidedAcceptHeader. Only used for testing. */
+    public String getAppProvidedAcceptHeader() {
+        return appProvidedAcceptHeader;
     }
 
     /** The Content-Type response header received (null before the remote operation is attempted). */

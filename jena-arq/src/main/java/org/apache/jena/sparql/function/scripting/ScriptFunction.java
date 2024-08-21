@@ -18,6 +18,8 @@
 
 package org.apache.jena.sparql.function.scripting;
 
+import static org.apache.jena.atlas.lib.Lib.lowercase;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
@@ -113,18 +115,18 @@ public class ScriptFunction extends FunctionBase {
         this.name = localPart.substring(separatorPos + 1);
         this.allowList = allowList(cxt, ARQ.symCustomFunctionScriptAllowList);
 
-        String cname = lang.toLowerCase(Locale.ROOT);
+        String cname = lowercase(lang);
         switch(cname) {
             case "js":
                 // never allow these.
                 this.denyList = Set.of("eval", "load");
                 check(lang, name, allowList, denyList);
                 break;
-            case "python":
-                // never allow these.
-                this.denyList = Set.of("eval", "exec");
-                check(lang, name, allowList, denyList);
-                break;
+//            case "python":
+//                // never allow these.
+//                this.denyList = Set.of("eval", "exec");
+//                check(lang, name, allowList, denyList);
+//                break;
             default:
                 throw new ScriptDenyException("Language '"+lang+"' not recognized");
         }
@@ -149,7 +151,7 @@ public class ScriptFunction extends FunctionBase {
     }
 
     @Override
-    protected NodeValue exec(List<NodeValue> args, FunctionEnv env) {
+    public NodeValue exec(List<NodeValue> args, FunctionEnv env) {
         env.getContext();
         return exec(args);
     }
@@ -230,15 +232,6 @@ public class ScriptFunction extends FunctionBase {
         }
 
         Invocable invocable = (Invocable) engine;
-//        for (String name : engine.getFactory().getNames()) {
-//            try {
-//                invocable.invokeFunction("arq" + name + "init");
-//            } catch (NoSuchMethodException ignore) {
-//                /* empty */
-//            } catch (ScriptException ex) {
-//                throw new ExprException("Failed to call " + lang + " initialization function", ex);
-//            }
-//        }
         return invocable;
     }
 

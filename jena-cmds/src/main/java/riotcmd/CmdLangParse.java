@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.zip.GZIPOutputStream;
 
 import arq.cmdline.ModContext;
@@ -82,12 +83,12 @@ public abstract class CmdLangParse extends CmdGeneral {
     }
 
     protected List<ParseRecord> outcomes = new ArrayList<>();
-
     protected OutputStream outputWrite = System.out;
     protected StreamRDF parserOutputStream = null;
     protected String parserBaseIRI = null;
     protected boolean passRelativeURIs = false;
     protected String writerBaseIRI = null;
+
     @Override
     protected void processModulesAndArgs() {
         cmdStrictMode = super.contains(argStrict);
@@ -123,7 +124,10 @@ public abstract class CmdLangParse extends CmdGeneral {
     }
 
     protected static class ParseRecord {
+        // Display name (filename as given on the command line)
         final String filename;
+        // Resolved filename as a URL string.
+        final String sourceURL;
         final boolean success;
         final long timeMillis;
         final long triples;
@@ -131,9 +135,10 @@ public abstract class CmdLangParse extends CmdGeneral {
         final long tuples = 0;
         final ErrorHandlerCLI errHandler;
 
-        public ParseRecord(String filename, boolean successful, long timeMillis, long countTriples, long countQuads,
+        public ParseRecord(String filename, String sourceURL, boolean successful, long timeMillis, long countTriples, long countQuads,
                            ErrorHandlerCLI errHandler) {
             this.filename = filename;
+            this.sourceURL = sourceURL;
             this.success = successful;
             this.timeMillis = timeMillis;
             this.triples = countTriples;
@@ -198,18 +203,18 @@ public abstract class CmdLangParse extends CmdGeneral {
 
         if ( ! modLangParse.mergeQuads() && ! isQuadsOutput() ) {
             // Only pass through triples.
-            final StreamRDF dest = parserOutputStream;
             if ( isStreamingOutput() ) {
-                Runnable action = () -> {
+                Function<Quad, StreamTriplesOnly.QuadPolicy> action = (quad) -> {
                     // dest may be significantly buffered over the top of the output stream.
                     // The log message does not necessarily come out in the right place - it may be early.
+                    // "Best effort" attempt to align log message to output.
                     IO.flush(outputWrite);
                     Log.warn(SysRIOT.getLogger(), "Quads in triples output - quads ignored.");
+                    return StreamTriplesOnly.QuadPolicy.IGNORE;
                 };
-                parserOutputStream = StreamTriplesOnly.actionIfQuads(parserOutputStream, action);
-            } else {
-                // Not streaming - code can issue error before formatting.
+                parserOutputStream = StreamTriplesOnly.setActionIfQuads(parserOutputStream, action);
             }
+            // If not streaming, leave to the writer,
         }
 
         // If QuadsToTriples is added here, then counts will be "triples only"
@@ -310,7 +315,8 @@ public abstract class CmdLangParse extends CmdGeneral {
             builder.lang(lang);
         }
 
-        // Set the source.
+        // Set the display name and the source URL.
+        String sourceURL = filename;
         if ( filename.equals("-") ) {
             if ( baseParserIRI == null ) {
                 baseParserIRI = "http://base/";
@@ -325,17 +331,18 @@ public abstract class CmdLangParse extends CmdGeneral {
                 // File handling will reverse the transformation to open
                 // the file correctly but for base name generation we want the %20
                 // form.
-                filename = IRILib.filenameToIRI(filename);
-            builder.source(filename);
+                sourceURL = IRILib.filenameToIRI(filename);
+            builder.source(sourceURL);
         }
-        return parseRIOT(builder, filename);
+        return parseRIOT(builder, filename, sourceURL);
     }
 
     // Return the default (fall-back) language used if no other choice is made.
     // Contrast with --syntax=.. which forces the language.
     protected abstract Lang dftLang();
 
-    protected ParseRecord parseRIOT(RDFParserBuilder builder, String filename) {
+    /** Parse one source */
+    protected ParseRecord parseRIOT(RDFParserBuilder builder, String filename, String sourceURL) {
         boolean checking = true;
         if ( modLangParse.explicitChecking() )
             checking = true;
@@ -393,7 +400,7 @@ public abstract class CmdLangParse extends CmdGeneral {
         }
         parserOut.finish();
         long x = modTime.endTimer();
-        ParseRecord outcome = new ParseRecord(filename, successful, x, parserOut.countTriples(), parserOut.countQuads(), errHandler);
+        ParseRecord outcome = new ParseRecord(filename, sourceURL, successful, x, parserOut.countTriples(), parserOut.countQuads(), errHandler);
         return outcome;
     }
 

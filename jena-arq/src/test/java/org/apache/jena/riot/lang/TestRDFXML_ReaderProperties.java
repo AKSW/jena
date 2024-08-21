@@ -28,25 +28,27 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
-import org.apache.jena.riot.RIOT;
+import org.apache.jena.riot.RDFParserBuilder;
 import org.apache.jena.riot.SysRIOT;
-import org.apache.jena.riot.*;
+import org.apache.jena.riot.lang.rdfxml.RRX;
 import org.apache.jena.riot.system.ErrorHandlerFactory;
 import org.junit.Test;
 
+/**
+ * Tests for setting reader properties - specific to ARP0 and ARP1.
+ */
 public class TestRDFXML_ReaderProperties {
-    enum PARSER { RDFXML_ORIGINAL, RDFXML_DEFAULT }
-
+    @SuppressWarnings("deprecation")
     @Test public void rdfxmlreaderProperties_arp0() {
-        execTest(PARSER.RDFXML_ORIGINAL);
-    }
-
-    @Test public void rdfxmlreaderProperties_arp() {
-        execTest(PARSER.RDFXML_DEFAULT);
+        execTest(RRX.RDFXML_ARP0);
     }
 
     @SuppressWarnings("deprecation")
-    private void execTest(PARSER parser) {
+    @Test public void rdfxmlreaderProperties_arp1() {
+        execTest(RRX.RDFXML_ARP0);
+    }
+
+    private void execTest(Lang parserLang) {
         // Inline illustrative data.
         String data = StrUtils.strjoinNL
                 ("<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -54,7 +56,7 @@ public class TestRDFXML_ReaderProperties {
                ,"         xmlns:ex=\"http://examples.org/\""
                ,"         xml:base=\"http://example/\""
                ,"         >"
-                // This rdf:ID starts with a digit which normal causes a warning.
+                // This rdf:ID starts with a digit which normally causes a warning.
                 ,"  <ex:Type rdf:ID='012345'></ex:Type>"
                 ,"</rdf:RDF>"
                 );
@@ -68,21 +70,11 @@ public class TestRDFXML_ReaderProperties {
 
         Model model = ModelFactory.createDefaultModel();
         // Build and run a parser
-        RDFParserBuilder builder = RDFParser.fromString(data)
-            .lang(Lang.RDFXML)
-            .set(RIOT.symRDFXML0, true)
+        RDFParserBuilder builder = RDFParser.fromString(data, parserLang)
             // Put a properties object into the Context.
             .set(SysRIOT.sysRdfReaderProperties, properties)
             // Exception on warning or error.
             .errorHandler(ErrorHandlerFactory.errorHandlerExceptions());
-        switch(parser) {
-            case RDFXML_DEFAULT :
-                break;
-            case RDFXML_ORIGINAL :
-                builder.set(RIOT.symRDFXML0, "true");
-                break;
-        }
-
         builder.parse(model);
         assertEquals(1, model.size());
     }

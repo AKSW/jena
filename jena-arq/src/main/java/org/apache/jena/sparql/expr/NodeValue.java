@@ -277,12 +277,12 @@ public abstract class NodeValue extends ExprNode
 
         Node n = null ;
         if ( langTag != null )
-            n = NodeFactory.createLiteral(lexicalForm, langTag) ;
+            n = NodeFactory.createLiteralLang(lexicalForm, langTag) ;
         else if ( datatype != null) {
             RDFDatatype dType = TypeMapper.getInstance().getSafeTypeByName(datatype) ;
             n = NodeFactory.createLiteral(lexicalForm, dType) ;
         } else
-            n = NodeFactory.createLiteral(lexicalForm) ;
+            n = NodeFactory.createLiteralString(lexicalForm) ;
 
         return NodeValue.makeNode(n) ;
     }
@@ -462,12 +462,6 @@ public abstract class NodeValue extends ExprNode
         return NodeValueCmp.sameValueAs(nv1, nv2);
     }
 
-    /** @deprecated Use {@link #sameValueAs(NodeValue, NodeValue)}. */
-    @Deprecated
-    public static boolean sameAs(NodeValue nv1, NodeValue nv2) {
-        return sameValueAs(nv1, nv2);
-    }
-
     /**
      * Return true if the two Nodes are known to be different, return false if the
      * two Nodes are known to be the same, else throw ExprEvalException
@@ -476,24 +470,12 @@ public abstract class NodeValue extends ExprNode
         return notSameValueAs(NodeValue.makeNode(n1), NodeValue.makeNode(n2));
     }
 
-    /** @deprecated Use {@link #sameValueAs(NodeValue, NodeValue)}. */
-    @Deprecated
-    public static boolean notSameAs(Node n1, Node n2) {
-        return notSameValueAs(n1, n2);
-    }
-
     /**
      * Return true if the two NodeValues are known to be different, return false if
      * the two NodeValues are known to be the same, else throw ExprEvalException
      */
     public static boolean notSameValueAs(NodeValue nv1, NodeValue nv2) {
         return NodeValueCmp.notSameValueAs(nv1, nv2);
-    }
-
-    /** @deprecated Use {@link #sameValueAs(NodeValue, NodeValue)}. */
-    @Deprecated
-    public static boolean notSameAs(NodeValue nv1, NodeValue nv2) {
-        return notSameValueAs(nv1, nv2);
     }
 
     // ----------------------------------------------------------------
@@ -641,7 +623,7 @@ public abstract class NodeValue extends ExprNode
         // This includes type testing
         //if ( ! lit.getDatatype().isValidLiteral(lit) )
         // Use this - already calculated when the node is formed.
-        if ( !node.getLiteral().isWellFormed() )
+        if ( !lit.isWellFormed() )
         {
             if ( NodeValue.VerboseWarnings )
             {
@@ -658,7 +640,6 @@ public abstract class NodeValue extends ExprNode
 
         return new NodeValueNode(node) ;
         //raise(new ExprException("NodeValue.nodeToNodeValue: Unknown Node type: "+n)) ;
-
     }
 
     // Jena code does not have these types (yet)
@@ -870,9 +851,8 @@ public abstract class NodeValue extends ExprNode
         if ( other == null ) return false ;
         if ( this == other ) return true ;
         // This is the equality condition Jena uses - lang tags are different by case.
-        if ( ! ( other instanceof NodeValue ) )
+        if ( ! ( other instanceof NodeValue nv) )
             return false ;
-        NodeValue nv = (NodeValue)other ;
         return asNode().equals(nv.asNode()) ;
         // Not NodeFunctions.sameTerm (which smooshes language tags by case)
     }

@@ -60,10 +60,8 @@ public abstract class StatementBase
 
 	public abstract RDFNode getObject();
 
-    /** @deprecated To be removed: Argument 'wellFormed is ignored */
-    @Deprecated
-	protected StatementImpl stringReplace(String s, String lang, boolean wellFormed) {
-	    return replace(new LiteralImpl(NodeFactory.createLiteral(s, lang, wellFormed), model));
+	protected StatementImpl stringReplace(String s, String lang) {
+	    return replace(new LiteralImpl(NodeFactory.createLiteralLang(s, lang), model));
 	}
 
 	/**
@@ -73,7 +71,7 @@ public abstract class StatementBase
 	 * disappear.
 	 */
 	protected StatementImpl stringReplace( String s )
-		{ return stringReplace( s, "", false ); }
+		{ return stringReplace( s, ""); }
 
 	public Statement changeLiteralObject( boolean o )
 		{ return changeObject( model.createTypedLiteral( o ) ); }
@@ -96,18 +94,8 @@ public abstract class StatementBase
 	public Statement changeObject( String o )
 		{ return stringReplace( String.valueOf( o ) ); }
 
-    /** @deprecated To be removed: Argument 'wellFormed is ignored */
-    @Deprecated
-	public Statement changeObject( String o, boolean wellFormed )
-		{ return stringReplace( String.valueOf( o ), "", wellFormed ); }
-
 	public Statement changeObject( String o, String l )
-		{ return stringReplace( String.valueOf( o ), l, false ); }
-
-	/** @deprecated To be removed: Argument 'wellFormed is ignored */
-	@Deprecated
-	public Statement changeObject( String o, String l, boolean wellFormed )
-	{ return stringReplace( String.valueOf( o ), l, wellFormed ); }
+		{ return stringReplace( String.valueOf( o ), l ); }
 
 	public Statement changeObject( RDFNode o )
 		{ return replace( o ); }
@@ -153,20 +141,6 @@ public abstract class StatementBase
 	public String getLanguage()
 		{ return getLiteral().getLanguage(); }
 
-    /**
-     * @deprecated To be removed. Well-formedness of XML literal is not tested for.
-     */
-    @Deprecated
-	public boolean getWellFormed()
-		{ return hasWellFormedXML(); }
-
-	/**
-     * @deprecated To be removed. Well-formness of XML literal is not tested for.
-	 */
-	@Deprecated
-    public boolean hasWellFormedXML()
-        { return getLiteral().isWellFormedXML(); }
-
 	/**
 	 	Answer a string describing this Statement in a vaguely pretty way, with the
 	 	representations of the subject, predicate, and object in that order.
@@ -183,9 +157,9 @@ public abstract class StatementBase
 		}
 
 	/**
-	 	Answer a string describing <code>object</code>, quoting it if it is a literal.
+	 	Answer a string describing <code>object</code>
 	*/
-	protected String objectString( RDFNode object )
-		{ return object.asNode().toString( null, true ); }
-
-	}
+    protected String objectString(RDFNode object) {
+        return object.toString();
+    }
+}

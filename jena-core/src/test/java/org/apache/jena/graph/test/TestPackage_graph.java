@@ -48,16 +48,16 @@ public class TestPackage_graph extends TestSuite {
         addTest( TestFactory.suite() );
         addTest( TestGraph.suite() );
         addTest( new JUnit4TestAdapter(TestGraphPlain.class) );
-        addTest( TestSimpleGraphMaker.suite() );
-        addTest( TestGraphExtract.suite() );
         addTest( TestGraphUtils.suite() );
         addTest( TestGraphPrefixMapping.suite() );
         addTest( TestGraphMatchWithInference.suite());
         addTestSuite( TestGraphEvents.class );
         addTestSuite( TestGraphBaseToString.class );
         addTest( new JUnit4TestAdapter(TestNodeExtras.class) );
+        addTest( new JUnit4TestAdapter(TestRDFStringLiterals.class) );
 
         // Has to be in a different package.
         addTest( new JUnit4TestAdapter(TestGraphUtil.class) );
+
     }
 }

@@ -18,6 +18,7 @@
 package org.apache.jena.arq.querybuilder.handlers;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 import org.apache.jena.arq.querybuilder.AbstractQueryBuilder;
 import org.apache.jena.arq.querybuilder.Converters;
@@ -45,6 +46,11 @@ import org.apache.jena.vocabulary.RDF;
  *
  */
 public class WhereHandler implements Handler {
+    
+    private static Predicate<Node> checkPredicate = n -> n.isURI() || n.isVariable() ||n.equals(Node.ANY);
+    
+    private static Predicate<Node> checkSubject = n -> checkPredicate.test(n) || n.isBlank() || n.isNodeTriple();
+
 
     // the query to modify
     private final Query query;
@@ -165,22 +171,11 @@ public class WhereHandler implements Handler {
      * @param t The trip to test.
      */
     private static void testTriple(TriplePath t) {
+        
         // verify Triple is valid
-        boolean validSubject =
-                t.getSubject().isURI() || t.getSubject().isBlank() || t.getObject().isNodeTriple()
-                || t.getSubject().isVariable() || t.getSubject().equals(Node.ANY);
-        boolean validPredicate;
-
-        if (t.isTriple()) {
-            validPredicate = t.getPredicate().isURI()
-                    || t.getPredicate().isVariable() || t.getPredicate().equals(Node.ANY);
-        } else {
-            validPredicate = t.getPath() != null;
-        }
-
-        boolean validObject =
-                t.getObject().isURI() || t.getObject().isLiteral() || t.getObject().isBlank() || t.getObject().isNodeTriple()
-                || t.getObject().isVariable() || t.getObject().equals(Node.ANY);
+        boolean validSubject = checkSubject.test(t.getSubject());
+        boolean validPredicate = t.isTriple() ? checkPredicate.test(t.getPredicate()) : t.getPath() != null;
+        boolean validObject = checkSubject.test(t.getObject()) || t.getObject().isLiteral();
 
         if (!validSubject || !validPredicate || !validObject) {
             StringBuilder sb = new StringBuilder();
@@ -189,11 +184,11 @@ public class WhereHandler implements Handler {
                         t.getSubject()));
             }
             if (!validPredicate) {
-                sb.append(String.format("Predicate (%s) must be a Path, URI , variable, or a wildcard. %n",
+                sb.append(String.format("Predicate (%s) must be a Path, URI, variable, or a wildcard. %n",
                         t.getPredicate()));
             }
             if (!validObject) {
-                sb.append(String.format("Object (%s) must be a URI, literal, blank, , variable, or a wildcard. %n",
+                sb.append(String.format("Object (%s) must be a URI, literal, blank, variable, or a wildcard. %n",
                         t.getObject()));
             }
             if (!validSubject || !validPredicate) {
@@ -227,12 +222,23 @@ public class WhereHandler implements Handler {
                 ElementPathBlock epb = (ElementPathBlock) e;
                 epb.addTriple(t);
             } else {
-                ElementPathBlock etb = new ElementPathBlock();
-                etb.addTriple(t);
-                eg.addElement(etb);
+                ElementPathBlock epb = new ElementPathBlock();
+                epb.addTriple(t);
+                eg.addElement(epb);
             }
 
         }
+    }
+    
+    /**
+     * Add the triple path to the where clause
+     *
+     * @param t The triple path to add.
+     * @throws IllegalArgumentException If the triple path is not a valid triple
+     * path for a where clause.
+     */
+    public void addWhere(Collection<TriplePath> t) throws IllegalArgumentException {
+        t.forEach(this::addWhere);
     }
 
     /**
@@ -254,9 +260,19 @@ public class WhereHandler implements Handler {
      * where clause.
      */
     public void addOptional(TriplePath t) throws IllegalArgumentException {
-        testTriple(t);
+        addOptional(Arrays.asList(t));
+    }
+    
+    /**
+     * Add an optional triple to the where clause
+     *
+     * @param t The triple path to add.
+     * @throws IllegalArgumentException If the triple is not a valid triple for a
+     * where clause.
+     */
+    public void addOptional(Collection<TriplePath> t) throws IllegalArgumentException {
         ElementPathBlock epb = new ElementPathBlock();
-        epb.addTriple(t);
+        t.forEach( tp -> {testTriple(tp);epb.addTriple(tp);});
         ElementOptional opt = new ElementOptional(epb);
         getClause().addElement(opt);
     }
@@ -381,6 +397,20 @@ public class WhereHandler implements Handler {
         epb.addTriple(subQuery);
         getClause().addElement(new ElementNamedGraph(graph, epb));
     }
+    
+    /**
+     * Add a graph to the where clause.
+     *
+     * Short hand for graph { s, p, o }
+     *
+     * @param graph The name of the graph.
+     * @param subQuery A triple path to add to the graph.
+     */
+    public void addGraph(Node graph, Collection<TriplePath> subQuery) {
+        ElementPathBlock epb = new ElementPathBlock();
+        subQuery.forEach(epb::addTriple);
+        getClause().addElement(new ElementNamedGraph(graph, epb));
+    }
 
     /**
      * Add a binding to the where clause.
@@ -445,7 +475,9 @@ public class WhereHandler implements Handler {
      *
      * @param objs the list of objects for the list.
      * @return the first blank node in the list.
+     * @deprecated use {code Converters.makeCollection(List.of(Object...))}.
      */
+    @Deprecated(since="5.0.0")
     public Node list(Object... objs) {
         Node retval = NodeFactory.createBlankNode();
         Node lastObject = retval;

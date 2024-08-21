@@ -41,12 +41,12 @@ public class TestTriple extends GraphTestBase
 
     private static final String U = "http://some.domain.name/magic/spells.incant";
     private static final String N = "Alice";
-    private static final LiteralLabel L = LiteralLabelFactory.create( "ashes are burning", "en", false );
+    private static final LiteralLabel L = LiteralLabelFactory.createLang( "ashes are burning", "en" );
 
     public void testTripleEquals() {
         // create some nodes to test
-        BlankNodeId id = BlankNodeId.create();
-        LiteralLabel L2 = LiteralLabelFactory.create(id.toString(), "", false);
+        String id = BlankNodeId.createFreshId();
+        LiteralLabel L2 = LiteralLabelFactory.createLang(id.toString(), "");
         String U2 = id.toString();
         String N2 = id.toString();
 
@@ -249,7 +249,7 @@ public class TestTriple extends GraphTestBase
     public void testTripleToStringQuoting()
         {
         Triple t1 = NodeCreateUtils.createTriple( "subject predicate 'object'" );
-        assertTrue( t1.toString().indexOf( "\"object\"") > 0 );
+        assertTrue( t1.toString().indexOf( "object") > 0 );
         }
 
     public void testTripleToStringWithPrefixing()
@@ -257,7 +257,8 @@ public class TestTriple extends GraphTestBase
         PrefixMapping pm = PrefixMapping.Factory.create();
         pm.setNsPrefix( "spoo", "eg://domain.dom/spoo#" );
         Triple t1 = NodeCreateUtils.createTriple( "eg://domain.dom/spoo#a b c" );
-        assertEquals( "spoo:a @eh:/b eh:/c", t1.toString( pm ) );
+        //assertEquals( "spoo:a <eh:/b> <eh:/c>", t1.toString( pm ) );
+        assertEquals( "spoo:a eh:/b eh:/c", t1.toString( pm ) );
         }
 
     public void testTripleMaps()

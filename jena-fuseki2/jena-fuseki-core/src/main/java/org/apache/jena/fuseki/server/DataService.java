@@ -20,7 +20,7 @@ package org.apache.jena.fuseki.server;
 
 import static java.lang.String.format;
 import static org.apache.jena.fuseki.server.DataServiceStatus.*;
-import static org.apache.jena.tdb.sys.TDBInternal.isTDB1;
+import static org.apache.jena.tdb1.sys.TDBInternal.isTDB1;
 import static org.apache.jena.tdb2.sys.TDBInternal.isTDB2;
 
 import java.util.*;
@@ -41,6 +41,9 @@ import org.apache.jena.riot.out.NodeFmtLib;
 import org.apache.jena.sparql.core.DatasetGraph;
 import org.apache.jena.sparql.core.DatasetGraphWrapper;
 
+/**
+ * A {@code DataService} is the fuseki Service in a configuration file.
+ */
 public class DataService {
     // Not final - it is null'ed if closed to release the dataset state.
     private DatasetGraph dataset;
@@ -278,7 +281,7 @@ public class DataService {
         if ( isTDB1 || isTDB2 ) {
             // JENA-1586: Remove database from the process.
             if ( isTDB1 )
-                org.apache.jena.tdb.sys.TDBInternal.expel(base);
+                org.apache.jena.tdb1.sys.TDBInternal.expel(base);
             if ( isTDB2 )
                 org.apache.jena.tdb2.sys.TDBInternal.expel(base);
         }

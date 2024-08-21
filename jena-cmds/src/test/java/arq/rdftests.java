@@ -31,7 +31,7 @@ import org.apache.jena.arq.junit.manifest.ManifestEntry;
 import org.apache.jena.arq.junit.riot.RiotTests;
 import org.apache.jena.arq.junit.riot.VocabLangRDF;
 import org.apache.jena.arq.junit.sparql.SparqlTests;
-import org.apache.jena.arq.junit.sparql.tests.QueryExecTest;
+import org.apache.jena.arq.junit.sparql.tests.QueryEvalTest;
 import org.apache.jena.atlas.legacy.BaseTest2;
 import org.apache.jena.atlas.lib.Lib;
 import org.apache.jena.atlas.logging.LogCtl;
@@ -57,10 +57,10 @@ import org.apache.jena.sparql.util.NodeFactoryExtra;
 import org.apache.jena.sparql.vocabulary.DOAP;
 import org.apache.jena.sparql.vocabulary.EARL;
 import org.apache.jena.sparql.vocabulary.FOAF;
-import org.apache.jena.sparql.vocabulary.TestManifest;
 import org.apache.jena.sys.JenaSystem;
 import org.apache.jena.vocabulary.DC;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.TestManifest;
 import org.apache.jena.vocabulary.XSD;
 
 /** A program to execute test suites by manifest.
@@ -147,7 +147,7 @@ public class rdftests extends CmdGeneral
             // Which will apply to reading the manifests!
             ARQ.setStrictMode();
             SysRIOT.setStrictMode(true);
-            QueryExecTest.compareResultSetsByValue = false;
+            QueryEvalTest.compareResultSetsByValue = false;
         }
 
         if ( arqAsNormal )
