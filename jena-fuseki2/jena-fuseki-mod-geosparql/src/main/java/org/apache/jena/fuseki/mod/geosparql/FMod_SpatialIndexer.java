@@ -55,18 +55,15 @@ public class FMod_SpatialIndexer implements FusekiAutoModule {
 
     @Override
     public String name() {
-        System.err.println("XXX Name accessed");
         return "Spatial Indexer";
     }
 
     @Override
     public void start() {
-        System.err.println("XXX start called");
     }
 
     @Override
     public void prepare(FusekiServer.Builder builder, Set<String> datasetNames, Model configModel) {
-        System.err.println("XXX prepare called");
         Fuseki.configLog.info(name() + ": Module adds spatial index servlet");
         Operation op = getOperation();
         builder.registerOperation(op, new SpatialIndexComputeService());
@@ -75,7 +72,6 @@ public class FMod_SpatialIndexer implements FusekiAutoModule {
 
     @Override
     public void configured(FusekiServer.Builder serverBuilder, DataAccessPointRegistry dapRegistry, Model configModel) {
-        System.err.println("XXX configured called");
         FusekiAutoModule.super.configured(serverBuilder, dapRegistry, configModel);
 
         Operation op = getOperation();
@@ -94,12 +90,6 @@ public class FMod_SpatialIndexer implements FusekiAutoModule {
             dapRegistry.remove(dap.getName());
             dapRegistry.register(dap);
         });
-    }
-
-    @Override
-    public void configDataAccessPoint(DataAccessPoint dap, Model configModel) {
-        System.err.println("XXX config data access point called");
-        FusekiAutoModule.super.configDataAccessPoint(dap, configModel);
     }
 
     @Override

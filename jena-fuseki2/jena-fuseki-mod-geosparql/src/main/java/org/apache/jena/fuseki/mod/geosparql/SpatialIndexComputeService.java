@@ -110,7 +110,17 @@ public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
             SpatialIndexPerGraph index = (SpatialIndexPerGraph)indexTmp;
 
             if (index == null) { // no spatial index has been configured
-                action.log.error(format("[%d] no spatial index has been configured for the dataset", action.id));
+                String msg = format("[%d] no spatial index has been configured for the dataset", action.id);
+                action.log.error(msg);
+
+                action.setResponseStatus(HttpSC.SERVICE_UNAVAILABLE_503);
+                action.setResponseContentType(WebContent.contentTypeTextPlain);
+                try {
+                    action.getResponseWriter().println(msg);
+                } catch (IOException e) {
+                    throw new FusekiException(e);
+                }
+                return;
             } else {
                 Path oldLocation = index.getLocation();
                 if (oldLocation == null) {

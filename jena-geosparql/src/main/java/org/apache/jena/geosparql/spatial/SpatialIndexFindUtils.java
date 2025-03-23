@@ -19,6 +19,7 @@ package org.apache.jena.geosparql.spatial;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.jena.atlas.iterator.Iter;
 import org.apache.jena.atlas.iterator.IteratorCloseable;
@@ -143,19 +144,26 @@ public class SpatialIndexFindUtils {
      * @return Geo predicate objects prepared for adding to SpatialIndex.
      */
     public static IteratorCloseable<SpatialIndexItem> findGeoPredicateIndexItems(Graph graph, String srsURI) {
-        Iterator<Node> resIt = G.iterSubjectsOfPredicate(graph, SpatialExtension.GEO_LAT_NODE);
-        IteratorCloseable<SpatialIndexItem> result = Iter.iter(resIt).flatMap(feature -> {
-            Node lat = G.getOneSP(graph, feature, SpatialExtension.GEO_LAT_NODE);
-            Node lon = G.getSP(graph, feature, SpatialExtension.GEO_LON_NODE);
-            Iterator<SpatialIndexItem> r;
-            if (lon == null) {
-                LOGGER.warn("Geo predicates: latitude found but not longitude. " + feature);
-                r = Iter.empty();
-            } else {
+        Iterator<Triple> latIt = graph.find(Node.ANY, SpatialExtension.GEO_LAT_NODE, Node.ANY);
+        IteratorCloseable<SpatialIndexItem> result = Iter.iter(latIt).flatMap(triple -> {
+            Node feature = triple.getSubject();
+            Node lat = triple.getObject();
+
+            // Silently create the cross-product between lats and lons.
+            Iterator<Node> lons = G.iterSP(graph, feature, SpatialExtension.GEO_LON_NODE);
+            // LOGGER.warn("Geo predicates: also found but will not be added to index.");
+
+
+            // int[] lonCounter = {0};
+            Iterator<SpatialIndexItem> r = Iter.iter(lons).map(lon -> {
+//            	if (lonCounter[0] == 1) {
+//            		LOGGER.warn("Geo predicates: multiple longitudes on feature " + feature);
+//            	}
+//            	++lonCounter[0];
                 GeometryWrapper geometryWrapper = ConvertLatLon.toGeometryWrapper(lat, lon);
                 SpatialIndexItem item = makeSpatialIndexItem(feature, geometryWrapper, srsURI);
-                r = Iter.of(item);
-            }
+                return item;
+            });
             return r;
         });
         return result;
