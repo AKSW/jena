@@ -67,7 +67,7 @@ import org.apache.jena.reasoner.ReasonerRegistry;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.system.Txn;
-import org.apache.jena.system.TxnCtl;
+import org.apache.jena.system.AutoTxn;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDFS;
 import org.opengis.geometry.MismatchedDimensionException;
@@ -514,7 +514,7 @@ public class GeoSPARQLOperations {
         LOGGER.info("Find Mode SRS - Started");
         ModeSRS modeSRS = new ModeSRS();
         //Default Model
-        try (TxnCtl txn = Txn.begin(dataset, ReadWrite.READ)) {
+        try (AutoTxn txn = Txn.begin(dataset, ReadWrite.READ)) {
             Model defaultModel = dataset.getDefaultModel();
             modeSRS.search(defaultModel);
 

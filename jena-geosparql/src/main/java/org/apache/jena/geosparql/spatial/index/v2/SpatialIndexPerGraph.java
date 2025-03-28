@@ -34,7 +34,7 @@ import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.sparql.core.DatasetGraph;
 import org.apache.jena.system.Txn;
-import org.apache.jena.system.TxnCtl;
+import org.apache.jena.system.AutoTxn;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.slf4j.Logger;
@@ -138,7 +138,7 @@ public class SpatialIndexPerGraph implements SpatialIndex {
                                                        DatasetGraph datasetGraph,
                                                        Set<String> graphNames) throws SpatialIndexException {
         STRtreePerGraph trees = index.getIndex();
-        try (TxnCtl txn = Txn.begin(datasetGraph, TxnType.READ)) {
+        try (AutoTxn txn = Txn.begin(datasetGraph, TxnType.READ)) {
             for (String graphName : graphNames) {
                 Node g = graphName == null ? null : NodeFactory.createURI(graphName);
                 if (trees.contains(g)) {

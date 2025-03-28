@@ -36,7 +36,7 @@ import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
 import org.apache.jena.system.Txn;
-import org.apache.jena.system.TxnCtl;
+import org.apache.jena.system.AutoTxn;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -173,7 +173,7 @@ public class SpatialIndexUtils {
 
         STRtree treePerGraph;
         LOGGER.info("Building Spatial Index - Started");
-        try (TxnCtl txn = Txn.begin(datasetGraph, TxnType.READ)) {
+        try (AutoTxn txn = Txn.begin(datasetGraph, TxnType.READ)) {
             treePerGraph = STRtreeUtils.buildSpatialIndexTreeUnion(datasetGraph, srsURI);
         }
         LOGGER.info("Building Spatial Index - Completed");
@@ -192,7 +192,7 @@ public class SpatialIndexUtils {
 
         STRtreePerGraph treePerGraph;
         LOGGER.info("Building Spatial Index - Started");
-        try (TxnCtl txn = Txn.begin(datasetGraph, TxnType.READ)) {
+        try (AutoTxn txn = Txn.begin(datasetGraph, TxnType.READ)) {
             treePerGraph = STRtreeUtils.buildSpatialIndexTree(datasetGraph, srsURI);
         }
         LOGGER.info("Building Spatial Index - Completed");

@@ -145,7 +145,7 @@ public class Txn {
      * for use with try-with-resources blocks.
      * See {@link #begin(Transactional, TxnType)}.
      */
-    public static TxnCtl begin(Transactional txn, ReadWrite readWrite) {
+    public static AutoTxn begin(Transactional txn, ReadWrite readWrite) {
         return begin(txn, TxnType.convert(readWrite));
     }
 
@@ -160,7 +160,7 @@ public class Txn {
      * Usage example:
      * <pre>
      * public void myMethod() throws IOException {
-     *   try (TxnCtl txn = Txn.begin(dataset, TxnType.WRITE)) {
+     *   try (AutoTxn txn = Txn.begin(dataset, TxnType.WRITE)) {
      *     // Do work
      *     if (someError) {
      *         throw new IOException();
@@ -171,7 +171,7 @@ public class Txn {
      * }
      * </pre>
      */
-    public static TxnCtl begin(Transactional txn, TxnType txnType) {
+    public static AutoTxn begin(Transactional txn, TxnType txnType) {
         Objects.requireNonNull(txn);
         Objects.requireNonNull(txnType);
         boolean b = txn.isInTransaction();
@@ -179,6 +179,6 @@ public class Txn {
             TxnOp.compatibleWithPromote(txnType, txn);
         else
             txn.begin(txnType);
-        return new TxnCtl(txn, b);
+        return new AutoTxn(txn, b);
     }
 }

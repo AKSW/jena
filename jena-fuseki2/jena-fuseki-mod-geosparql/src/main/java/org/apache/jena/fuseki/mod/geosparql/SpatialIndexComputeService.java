@@ -92,7 +92,7 @@ public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
     @Override
     protected void doPost(HttpAction action) {
 
-        String spatialIndexFilePathStr = action.getRequestParameter("spatial-index-file");
+        // String spatialIndexFilePathStr = action.getRequestParameter("spatial-index-file");
 
         String commit = action.getRequestParameter("commit");
 

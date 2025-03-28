@@ -23,14 +23,14 @@ import org.apache.jena.sparql.core.Transactional;
  * Transaction control for use with try-with-resources.
  * See {@link Txn#begin(Transactional, org.apache.jena.query.TxnType)}.
  */
-public class TxnCtl
+public class AutoTxn
     implements AutoCloseable
 {
     private Transactional txn;
     private boolean b;
 
     /** Created from {@link Txn#begin(Transactional, org.apache.jena.query.TxnType)}. */
-    TxnCtl(Transactional txn, boolean b) {
+    AutoTxn(Transactional txn, boolean b) {
         super();
         this.txn = txn;
         this.b = b;

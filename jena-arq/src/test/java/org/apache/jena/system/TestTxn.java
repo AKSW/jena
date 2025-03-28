@@ -416,7 +416,7 @@ public class TestTxn {
 
     @Test public void txn_ctl_write_01() {
         long actualValue;
-        try (TxnCtl txn = Txn.begin(counter, TxnType.WRITE)) {
+        try (AutoTxn txn = Txn.begin(counter, TxnType.WRITE)) {
             counter.inc() ;
             assertEquals("In W, value()", 0, counter.value()) ;
             assertEquals("In W, get()",1, counter.get()) ;
@@ -429,7 +429,7 @@ public class TestTxn {
 
     @Test public void txn_ctl_write_02() {
         long expectedValue = counter.get();
-        try (TxnCtl txn = Txn.begin(counter, TxnType.WRITE)) {
+        try (AutoTxn txn = Txn.begin(counter, TxnType.WRITE)) {
             counter.inc() ;
             assertEquals("In W, value()", 0, counter.value()) ;
             assertEquals("In W, get()",1, counter.get()) ;
