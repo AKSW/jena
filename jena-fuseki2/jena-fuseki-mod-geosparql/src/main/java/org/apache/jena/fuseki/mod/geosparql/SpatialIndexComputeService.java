@@ -24,13 +24,19 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap.KeySetView;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.jena.atlas.io.IOX;
@@ -43,28 +49,58 @@ import org.apache.jena.geosparql.spatial.SpatialIndexException;
 import org.apache.jena.geosparql.spatial.index.v2.SpatialIndexIoKryo;
 import org.apache.jena.geosparql.spatial.index.v2.SpatialIndexPerGraph;
 import org.apache.jena.geosparql.spatial.index.v2.SpatialIndexUtils;
+import org.apache.jena.geosparql.spatial.index.v2.SpatialIndexerComputation;
+import org.apache.jena.geosparql.spatial.task.AbortableThread;
+import org.apache.jena.geosparql.spatial.task.TaskControl;
+import org.apache.jena.geosparql.spatial.task.TaskControlBase;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.riot.WebContent;
 import org.apache.jena.riot.web.HttpNames;
 import org.apache.jena.sparql.core.DatasetGraph;
+import org.apache.jena.sparql.util.Context;
 import org.apache.jena.web.HttpSC;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Spatial index (re)computation service.
  */
-public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
+public class SpatialIndexComputeService extends BaseActionREST {
+    private static final Logger logger = LoggerFactory.getLogger(SpatialIndexComputeService.class);
+
+    private Gson gson = new Gson();
+    private KeySetView<AsyncContext, ?> eventListeners = ConcurrentHashMap.newKeySet();
 
     public SpatialIndexComputeService() {}
 
     private static Set<String> getGraphs(DatasetGraph dsg, HttpAction action) {
         String[] uris = action.getRequest().getParameterValues(HttpNames.paramGraph);
-
         return uris == null ? Set.of(): new LinkedHashSet<>(Arrays.asList(uris));
     }
 
-    /** Get request; currently always returns HTML */
     @Override
     protected void doGet(HttpAction action) {
+        String rawCommand = action.getRequestParameter("command");
+        String command = Optional.ofNullable(rawCommand).orElse("website");
+        switch (command) {
+        case "website": serveWebSite(action); break;
+        case "events": serveEvents(action); break;
+        case "status": serveStatus(action); break;
+        default:
+            throw new UnsupportedOperationException("Unsupported operation: " + command);
+        }
+    }
+
+    public void serveWebSite(HttpAction action) {
         // Serves the minimal graphql ui
         String resourceName = "spatial-indexer/index.html";
         String str = null;
@@ -89,30 +125,176 @@ public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
         }
     }
 
+    protected TaskControl<?> getActiveTask(HttpAction action) {
+        DatasetGraph dsg = action.getDataset();
+        Context cxt = dsg.getContext();
+        TaskControl<?> activeTask = cxt.get(SpatialIndexUtils.SPATIAL_INDEX_TASK_SYMBOL);
+        return activeTask;
+    }
+
+//    public void ensureNoActiveTask(HttpAction action) {
+//        TaskControl<?> activeTask = getActiveTask(action);
+//        if (activeTask != null) {
+//            throw new RuntimeException("A task is currently active. Abort it first.");
+//        }
+//    }
+
+    /**
+     * Post request: Handle API call.
+     * Request is rejected if there is an already running task.
+     */
     @Override
     protected void doPost(HttpAction action) {
+        String rawCommand = action.getRequestParameter("command");
+        String command = Optional.ofNullable(rawCommand).orElse("none");
+        switch (command) {
+        case "index": doIndex(action); break;
+        case "status": serveStatus(action); break;
+        case "cancel": doStop(action); break;
+        default: throw new UnsupportedOperationException("Unsupported operation: " + command);
+        }
+    }
 
-        // String spatialIndexFilePathStr = action.getRequestParameter("spatial-index-file");
+    protected void serveEvents(HttpAction action) {
+        HttpServletRequest request = action.getRequest();
+        HttpServletResponse response = action.getResponse();
 
-        String commit = action.getRequestParameter("commit");
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
 
+        final AsyncContext asyncContext = request.startAsync();
+        asyncContext.setTimeout(0);
+        eventListeners.add(asyncContext);
+    }
+
+    protected void doStop(HttpAction action) {
+        TaskControl<?> task = getActiveTask(action);
+        String state;
+        if (task != null) {
+            state = "true";
+            // Add a completion listener to return when done.
+            task.abort();
+            Thread thread = (Thread)task.getSource();
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                // TODO Raise some HTTP error
+                throw new RuntimeException(e);
+            }
+        } else {
+            state = "false";
+        }
+
+        action.setResponseStatus(HttpSC.OK_200);
+        action.setResponseContentType(WebContent.contentTypeJSON);
+        try {
+            action.getResponseOutputStream().print(String.format("{ \"stopped\": %s }", state));
+        } catch (IOException e) {
+            throw new FusekiException(e);
+        }
+    }
+
+    public void serveStatus(HttpAction action) {
+        TaskControl<?> task = getActiveTask(action);
+
+        JsonObject status = new JsonObject();
+        if (task != null) {
+            status.addProperty("isIndexing", true);
+            status.addProperty("isAborting", task.isAborting());
+        }
+
+        action.setResponseStatus(HttpSC.OK_200);
+        action.setResponseContentType(WebContent.contentTypeJSON);
+        try {
+            String str = gson.toJson(status);
+            action.getResponseOutputStream().println(str);
+        } catch (IOException e) {
+            throw new FusekiException(e);
+        }
+    }
+
+    public TaskControl<?> scheduleTask(HttpAction action, SpatialIndexerComputation indexComputation, Path targetFile) {
         DatasetGraph dsg = action.getDataset();
+        Context cxt = dsg.getContext();
 
+        TaskControlBase<Thread> taskCtl = new TaskControlBase<>("Spatial Indexer Task");
+
+        cxt.compute(SpatialIndexUtils.SPATIAL_INDEX_TASK_SYMBOL, (key, priorTask) -> {
+            if (priorTask != null) {
+                throw new RuntimeException("A spatial indexing task is already active for this dataset. Wait for completion or abort it.");
+            }
+
+            AbortableThread thread = new AbortableThread() {
+                @Override
+                public void runActual() throws Exception {
+                    broadcastTaskStart();
+                    if (logger.isInfoEnabled()) {
+                        logger.info("Indexing process started.");
+                    }
+                    SpatialIndexPerGraph index = indexComputation.call();
+                    if (targetFile != null) {
+                        index.setLocation(targetFile);
+                        action.log.info("writing spatial index to disk at {}", targetFile.toAbsolutePath());
+                        SpatialIndexIoKryo.save(targetFile, index);
+                    }
+                    Thread.sleep(3000);
+                    if (logger.isInfoEnabled()) {
+                        logger.info("Indexing process completed successfully.");
+                    }
+                }
+
+                public void requestCancel() {
+                    broadcastTaskAbort();
+                    indexComputation.abort();
+                    super.requestCancel(); // Interrupt
+                }
+
+                @Override
+                protected void doOnClose() {
+                    try {
+                        broadcastTaskEnd();
+                        indexComputation.close();
+                    } finally {
+                        if (logger.isInfoEnabled()) {
+                            logger.info("Indexing process terminated.");
+                        }
+                        cxt.compute(SpatialIndexUtils.SPATIAL_INDEX_TASK_SYMBOL, (key2, priorTask2) -> {
+                            return priorTask2 == taskCtl ? null : priorTask2;
+                        });
+                    }
+                }
+            };
+
+            taskCtl.setSource(thread);
+            taskCtl.setAbortAction(thread::cancel);
+            thread.start();
+            return taskCtl;
+        });
+
+        return taskCtl;
+    }
+
+    protected void doIndex(HttpAction action) {
+        // String spatialIndexFilePathStr = action.getRequestParameter("spatial-index-file");
+        String commit = action.getRequestParameter("commit");
+        DatasetGraph dsg = action.getDataset();
+        Set<String> graphs;
         action.beginRead();
+        try {
 //        GraphTarget graphTarget = determineTarget(dsg, action);
-        Set<String> graphs = getGraphs(dsg, action);
+            graphs = getGraphs(dsg, action);
+        } finally {
 //        if (!graphTarget.exists())
 //            ServletOps.errorNotFound("No data graph: " + graphTarget.label());
-        action.end();
-
-        try {
+            action.end();
+        }
+//        try {
             SpatialIndex indexTmp = SpatialIndexUtils.getSpatialIndex(dsg.getContext());
             SpatialIndexPerGraph index = (SpatialIndexPerGraph)indexTmp;
-
-            if (index == null) { // no spatial index has been configured
+            if (index == null) { // error: no spatial index has been configured
                 String msg = format("[%d] no spatial index has been configured for the dataset", action.id);
                 action.log.error(msg);
-
                 action.setResponseStatus(HttpSC.SERVICE_UNAVAILABLE_503);
                 action.setResponseContentType(WebContent.contentTypeTextPlain);
                 try {
@@ -127,50 +309,55 @@ public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
                     action.log.warn("Skipping write: Spatial index write requested, but the spatial index was configured without a file location" +
                             " and no file param has been provided to the request neither. Skipping");
                 }
-
                 action.log.info(format("[%d] spatial index: computation started", action.id));
-
                 // check if graph based index has been configured on the dataset
                 boolean spatialIndexPerGraph = true; // ds.getContext().get(SpatialIndexUtils.symSpatialIndexPerGraph, false);
-
+                String srsURI = index.getSrsInfo().getSrsURI();
+                boolean parallel = true;
+                List<Node> graphNodes = graphs.stream().map(NodeFactory::createURI).toList();
+                SpatialIndexerComputation task = new SpatialIndexerComputation(dsg, srsURI, graphNodes, parallel);
+                scheduleTask(action, task, oldLocation);
+//                task.call();
+//                task.close();
+//
                 // no graph based index
-                if (!spatialIndexPerGraph) {
-                    action.log.info(format("[%d] (re)computing full spatial index as single index tree", action.id));
-                    index = SpatialIndexUtils.buildSpatialIndex(dsg, index.getSrsInfo().getSrsURI(), false);
-                } else {
-                    boolean isUnionGraph = graphs.contains(HttpNames.graphTargetUnion);
-                    if (isUnionGraph) { // union graph means we compute the whole index
-                        action.log.info(format("[%d] (re)computing full spatial index as separate index trees", action.id));
-                        index = SpatialIndexUtils.buildSpatialIndex(dsg, index.getSrsInfo().getSrsURI(), true);
-                    } else {
-                        action.log.info(format("[%d] (re)computing spatial index for graphs {}", action.id), graphs);
-                        SpatialIndexPerGraph.recomputeIndexForGraphs(index, dsg, graphs);
-                    }
-                }
-                index.setLocation(oldLocation);
-
-                if (commit != null) {
-                    Path targetFile = index.getLocation();
-//                    if (spatialIndexFilePathStr != null) {
-//                        targetFile = new File(spatialIndexFilePathStr);
-//                        index.setLocation(targetFile);
+//                if (!spatialIndexPerGraph) {
+//                    action.log.info(format("[%d] (re)computing full spatial index as single index tree", action.id));
+//                    index = SpatialIndexUtils.buildSpatialIndex(dsg, index.getSrsInfo().getSrsURI(), false);
+//                } else {
+//                    boolean isUnionGraph = graphs.contains(HttpNames.graphTargetUnion);
+//                    if (isUnionGraph) { // union graph means we compute the whole index
+//                        action.log.info(format("[%d] (re)computing full spatial index as separate index trees", action.id));
+//                        index = SpatialIndexUtils.buildSpatialIndex(dsg, index.getSrsInfo().getSrsURI(), true);
 //                    } else {
-//                        targetFile = index.getLocation();
+//                        action.log.info(format("[%d] (re)computing spatial index for graphs {}", action.id), graphs);
+//                        SpatialIndexPerGraph.recomputeIndexForGraphs(index, dsg, graphs);
 //                    }
-                    if (targetFile != null) {
-                        action.log.info("writing spatial index to disk at {}", targetFile.toAbsolutePath());
-                        SpatialIndexIoKryo.save(targetFile, index);
-                    } else {
-                        action.log.warn("Skipping write: Spatial index write requested, but the spatial index was configured without a file location" +
-                                " and no file param has been provided to the request neither. Skipping");
-                    }
+//                }
+//                index.setLocation(oldLocation);
 
-                }
+//                if (commit != null) {
+//                    Path targetFile = index.getLocation();
+////                    if (spatialIndexFilePathStr != null) {
+////                        targetFile = new File(spatialIndexFilePathStr);
+////                        index.setLocation(targetFile);
+////                    } else {
+////                        targetFile = index.getLocation();
+////                    }
+//                    if (targetFile != null) {
+//                        action.log.info("writing spatial index to disk at {}", targetFile.toAbsolutePath());
+//                        SpatialIndexIoKryo.save(targetFile, index);
+//                    } else {
+//                        action.log.warn("Skipping write: Spatial index write requested, but the spatial index was configured without a file location" +
+//                                " and no file param has been provided to the request neither. Skipping");
+//                    }
+//
+//                }
             }
-
-        } catch (SpatialIndexException e) {
-            throw new RuntimeException(e);
-        }
+//
+//        } catch (SpatialIndexException e) {
+//            throw new RuntimeException(e);
+//        }
 
         action.log.info(format("[%d] spatial index: computation finished", action.id));
         action.setResponseStatus(HttpSC.OK_200);
@@ -197,6 +384,49 @@ public class SpatialIndexComputeService extends BaseActionREST { //ActionREST {
             throw new SpatialIndexException("Save Exception: " + ex.getMessage(), ex);
         } finally {
             log.info("Saving Spatial Index - Completed: {}", file);
+        }
+    }
+
+    protected void broadcastTaskStart() {
+        JsonObject json = new JsonObject();
+        json.addProperty("isIndexing", true);
+        // TODO We should have a task ID.
+        broadcastJson(json);
+    }
+    protected void broadcastTaskAbort() {
+        JsonObject json = new JsonObject();
+        json.addProperty("isIndexing", true);
+        json.addProperty("isAborting", true);
+        // TODO We should have a task ID.
+        broadcastJson(json);
+    }
+
+    protected void broadcastTaskEnd() {
+        JsonObject json = new JsonObject();
+        json.addProperty("isIndexing", false);
+        // TODO We should have a task ID.
+        broadcastJson(json);
+    }
+
+    protected void broadcastJson(JsonElement jsonData) {
+        String str = gson.toJson(jsonData);
+        broadcastLine(str);
+    }
+
+    /** Argument is expected to not contain newline characters. */
+    protected void broadcastLine(String line) {
+        Iterator<AsyncContext> it = eventListeners.getMap().keySet().iterator();
+        while (it.hasNext()) {
+            AsyncContext context = it.next();
+            try {
+                PrintWriter writer = context.getResponse().getWriter();
+                writer.println("data: " + line);
+                writer.println();
+                writer.flush();
+            } catch (IOException e) {
+                it.remove();
+                context.complete();
+            }
         }
     }
 }

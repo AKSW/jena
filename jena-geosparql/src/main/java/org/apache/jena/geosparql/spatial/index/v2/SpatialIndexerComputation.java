@@ -1,6 +1,7 @@
 package org.apache.jena.geosparql.spatial.index.v2;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +26,7 @@ import org.locationtech.jts.index.strtree.STRtree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SpatialIndexerTask
-    // extends TaskControlBase<Object>
+public class SpatialIndexerComputation
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -44,12 +44,12 @@ public class SpatialIndexerTask
     private Object cancelLock = new Object();
 
     // private CompletionService<Entry<Node, STRtree>> completionService;
-    private List<Future<Entry<Node, STRtree>>> futures = null;
+    private List<Future<Entry<Node, STRtree>>> futures = new ArrayList<>();
 
     // private boolean parallel;
     // private Stream<Node> graphNodeStream;
 
-    public SpatialIndexerTask(DatasetGraph datasetGraph, String srsURI, List<Node> graphNodes, boolean parallel) {
+    public SpatialIndexerComputation(DatasetGraph datasetGraph, String srsURI, List<Node> graphNodes, boolean parallel) {
         // super(source, label);
         this.datasetGraph = datasetGraph;
         this.graphNodes = graphNodes;
@@ -104,6 +104,10 @@ public class SpatialIndexerTask
             } else {
                 namedTrees.put(graphNode, defaultTree);
             }
+        }
+
+        if (defaultTree == null) {
+            defaultTree = new STRtree();
         }
 
         STRtreePerGraph trees = new STRtreePerGraph(defaultTree, namedTrees);

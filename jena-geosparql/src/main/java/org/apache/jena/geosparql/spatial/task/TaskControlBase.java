@@ -24,10 +24,14 @@ public class TaskControlBase<S>
 
     protected volatile boolean hasBeenAborted = false;
 
-    public TaskControlBase(S source, String label) {
+    public TaskControlBase(String label) {
         super();
-        this.source = source;
         this.label = label;
+        // this.setAbortAction(abortAction);
+    }
+
+    public void setSource(S source) {
+        this.source = source;
     }
 
     @Override
@@ -51,6 +55,11 @@ public class TaskControlBase<S>
     }
 
     @Override
+    public boolean isAborting() {
+        return hasBeenAborted;
+    }
+
+    @Override
     public boolean isComplete() {
         return isComplete;
     }
@@ -71,7 +80,7 @@ public class TaskControlBase<S>
         return () -> completionHandlers.remove(handler);
     }
 
-    synchronized void setAbortAction(Runnable action) {
+    public synchronized void setAbortAction(Runnable action) {
         this.abortAction = action;
 
         if (hasBeenAborted) {

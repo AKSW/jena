@@ -43,6 +43,7 @@
         <input type="text" id="filter" placeholder="Type to filter...">
         <button id="deselect-all">Deselect All</button>
         <button id="apply-action">Apply to all graphs</button>
+        <button id="stop-action">Stop running action</button>
     </div>
 
     <table>
@@ -60,6 +61,52 @@
     <script>
         const sparqlEndpoint = document.location.href + '/../';
         const apiEndpoint = document.location.href;
+        const eventEndpoint = new EventSource(apiEndpoint + '?command=events');
+
+        let status = {};
+
+        eventEndpoint.onmessage = async e => {
+            // console.log('Got message:', e.data);
+            status = JSON.parse(e.data);
+            updateStatus();
+        };
+
+        eventEndpoint.onerror = e => {
+            // console.error('SSE error', e);
+        };
+
+        async function fetchIndexerStatus() {
+            const params = new URLSearchParams({ "command": "status" });
+            try {
+              const response = await fetch(apiEndpoint, { "method": "POST", "body": params })
+
+              if (response.status != 200) {
+                  const text = await response.text();
+                  throw new Error("HTTP Error: " + text);
+              }
+              const json = await response.json();
+              return json;
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+
+        async function cancelIndexing() {
+            const params = new URLSearchParams({ "command": "cancel" });
+            try {
+              const response = await fetch(apiEndpoint, { "method": "POST", "body": params })
+
+              if (response.status != 200) {
+                const text = await response.text();
+                throw new Error("HTTP Error: " + text);
+              }
+              // const json = await response.json();
+              // return json.stopped;
+
+            } catch (error) {
+              alert(`Error: ${error.message}`);
+            }
+        }
 
         async function fetchGraphs() {
             const query = `SELECT ?g { { BIND(<urn:x-arq:DefaultGraph> AS ?g) } UNION { GRAPH ?g { } } }`;
@@ -119,18 +166,20 @@
 
         async function reIndexGraphs(graphs) {
             applyBtn.disabled = true;
-            const params = new URLSearchParams({ "graph": graphs, "commit": null });
+            const params = new URLSearchParams({ "command": "index", "graph": graphs, "commit": null });
             try {
-              const response = await fetch(apiEndpoint, { "method": "POST", "body": params, signal })
+                const response = await fetch(apiEndpoint, { "method": "POST", "body": params, signal })
+                // TODO Disable cancel button - wait for event?
 
-              if (response.status != 200) {
-                const text = await response.text();
-                throw new Error("HTTP Error: " + text);
-              }
+                if (response.status != 200) {
+                    const text = await response.text();
+                    throw new Error("HTTP Error: " + text);
+                }
 
-              alert("Reindex complete");
-            } catch (error) {
-              alert(`Error: ${error.message}`);
+                // alert("Reindex complete");
+                // updateCancelButton();
+            }   catch (error) {
+                alert(`Error: ${error.message}`);
             }
             applyBtn.disabled = false;
         }
@@ -148,12 +197,47 @@
             updateApplyButtonLabel();
         });
 
+        function updateStatus() {
+            updateCancelButton();
+        }
+
+        function updateCancelButton() {
+            const elt = document.getElementById('stop-action');
+            elt.style.display = 'none';
+            elt.innerHTML = "Stop running indexer.";
+            elt.disabled = false;
+
+            if (status?.isIndexing) {
+                elt.style.display = '';
+                if (status?.isAborting) {
+                    elt.innerHTML = "Aborting...";
+                    elt.disabled = true;
+                }
+            }
+        }
+
+        document.getElementById('stop-action').addEventListener('click', function() {
+            const wasCancelled = cancelIndexing();
+            /*
+            if (wasCancelled) {
+                updateCancelButton();
+                alert(`Indexing cancelled.`);
+            } else {
+                alert(`There was no longer a task to cancel.`);
+            }
+            */
+        });
+
         async function initialize() {
+            status = await fetchIndexerStatus();
+            updateStatus();
+
             const graphs = await fetchGraphs();
             renderGraphs(graphs);
             updateApplyButtonLabel();
         }
 
+        updateStatus();
         initialize();
     </script>
 </body>

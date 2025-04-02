@@ -35,8 +35,8 @@ import org.apache.jena.sparql.core.NamedGraph;
 import org.apache.jena.sparql.engine.ExecutionContext;
 import org.apache.jena.sparql.util.Context;
 import org.apache.jena.sparql.util.Symbol;
-import org.apache.jena.system.Txn;
 import org.apache.jena.system.AutoTxn;
+import org.apache.jena.system.Txn;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +46,9 @@ public class SpatialIndexUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     public static final Symbol SPATIAL_INDEX_SYMBOL = Symbol.create("http://jena.apache.org/spatial#index");
+
+    /** Symbol for a running task in a dataset's context. */
+    public static final Symbol SPATIAL_INDEX_TASK_SYMBOL = Symbol.create("http://jena.apache.org/spatial#indexTask");
     public static final Symbol symSrsUri = Symbol.create("http://jena.apache.org/spatial#srsURI");
 
     /**

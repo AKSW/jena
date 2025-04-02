@@ -17,9 +17,9 @@
  */
 package org.apache.jena.fuseki.mod.geosparql;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.apache.jena.fuseki.Fuseki;
 import org.apache.jena.fuseki.main.FusekiServer;
@@ -67,7 +67,10 @@ public class FMod_SpatialIndexer implements FusekiAutoModule {
         Fuseki.configLog.info(name() + ": Module adds spatial index servlet");
         Operation op = getOperation();
         builder.registerOperation(op, new SpatialIndexComputeService());
-        datasetNames.forEach(name -> builder.addEndpoint(name, "spatial", op));
+
+        // This does not appear to do anything - datasetNames may be empty but data access points may exist.
+        // datasetNames.forEach(name -> builder.addEndpoint(name, "spatial", op));
+        // datasetNames.forEach(name -> builder.addEndpoint(name, "spatial-events", op));
     }
 
     @Override
@@ -75,15 +78,20 @@ public class FMod_SpatialIndexer implements FusekiAutoModule {
         FusekiAutoModule.super.configured(serverBuilder, dapRegistry, configModel);
 
         Operation op = getOperation();
-        List<DataAccessPoint> daps = dapRegistry.accessPoints().stream().map(dap -> {
+        List<DataAccessPoint> daps = new ArrayList<>();
+
+        for (DataAccessPoint dap : dapRegistry.accessPoints()) {
             Endpoint endpoint = Endpoint.create()
                     .operation(op)
                     .endpointName("spatial")
                     .build();
+
             // create new DataService based on existing one with the endpoint attached
-            DataService dSrv = DataService.newBuilder(dap.getDataService()).addEndpoint(endpoint).build();
-            return new DataAccessPoint(dap.getName(), dSrv);
-        }).collect(Collectors.toList());
+            DataService dSrv = DataService.newBuilder(dap.getDataService())
+                .addEndpoint(endpoint)
+                .build();
+            daps.add(new DataAccessPoint(dap.getName(), dSrv));
+        }
 
         // "replace" each DataAccessPoint
         daps.forEach(dap -> {

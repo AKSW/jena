@@ -12,6 +12,7 @@ public interface TaskControl<S> {
         String getLabel();
         S getSource();
         void abort();
+        boolean isAborting();
 
         boolean isComplete();
         Throwable getThrowable(); // Only meaningful if isComplete is true.
