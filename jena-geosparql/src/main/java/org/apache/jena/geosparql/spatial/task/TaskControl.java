@@ -17,6 +17,10 @@ public interface TaskControl<S> {
         boolean isComplete();
         Throwable getThrowable(); // Only meaningful if isComplete is true.
 
+//        Instant getCreationInstant();
+//        Instant getRunStartInstant();
+//        Instant getRunEndInstant();
+
         // CompletableFuture<?> getFuture();
         /** Retry a failed task. May only be called when isComplete() returns true */
         // void retry();

@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        #controls {
+        .controls {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
@@ -39,12 +39,33 @@
 <body>
     <h1>Rebuild Spatial Index for Selected Graphs</h1>
 
-    <div id="controls">
+    <div id="status-controls" class="controls" style="flex-direction: column;">
+        <div style="display: flex; width: 100%;">
+            <button id="toggle-status" style="display: none;">Show Stack Trace</button>
+        </div>
+        <div id="status-container" style="width: 100%;">
+            <pre id="status-message"></pre>
+        </div>
+    </div>
+
+    <div id="controls" class="controls">
         <input type="text" id="filter" placeholder="Type to filter...">
         <button id="deselect-all">Deselect All</button>
         <button id="apply-action">Apply to all graphs</button>
         <button id="stop-action">Stop running action</button>
+        <!-- <button id="stop-action">Stop running action</button> -->
     </div>
+
+    <!--
+    <div class="controls" style="flex-direction: column;">
+        <div style="display: flex; justify-content: flex-end; width: 100%;">
+            <button id="toggle-status" style="display: none;">Show Stack Trace</button>
+        </div>
+        <div id="status-container" style="width: 100%;">
+            <pre id="status-message" style="margin-top: 10px; padding: 10px; border-radius: 5px; white-space: pre-wrap;"></pre>
+        </div>
+    </div>
+    -->
 
     <table>
         <thead>
@@ -72,7 +93,7 @@
         };
 
         eventEndpoint.onerror = e => {
-            // console.error('SSE error', e);
+            console.error('SSE error', e);
         };
 
         async function fetchIndexerStatus() {
@@ -199,6 +220,7 @@
 
         function updateStatus() {
             updateCancelButton();
+            updateStatusMessage();
         }
 
         function updateCancelButton() {
@@ -213,6 +235,58 @@
                     elt.innerHTML = "Aborting...";
                     elt.disabled = true;
                 }
+            }
+        }
+
+        // Update status message and style.
+        function updateStatusMessage() {
+
+            const statusEl = document.getElementById('status-controls');
+            const messageEl = document.getElementById('status-message');
+            const toggleBtn = document.getElementById('toggle-status');
+            const statusContainer = document.getElementById('status-container');
+
+            if (status.isIndexing !== undefined) {
+                if (status.isIndexing) {
+                    messageEl.textContent = "Computation is ongoing...";
+                    statusEl.style.backgroundColor = "#ccc";
+                    statusEl.style.color = "#333";
+                    toggleBtn.style.display = 'none';
+                    statusContainer.style.display = 'block';
+                } else if (status.error) {
+                    toggleBtn.style.display = 'block';
+                    toggleBtn.textContent = 'Show Error Stack Trace';
+                    statusContainer.style.display = 'none';
+
+                    toggleBtn.onclick = () => {
+                        const visible = statusContainer.style.display === 'block';
+                        statusContainer.style.display = visible ? 'none' : 'block';
+                        toggleBtn.textContent = visible ? 'Show Stack Trace' : 'Hide Stack Trace';
+                    };
+
+                    messageEl.textContent = `An error occurred:\n${status.error}`;
+                    statusEl.style.backgroundColor = "#f8d7da";
+                    statusEl.style.color = "#721c24";
+                } else if (status.message) {
+                    messageEl.textContent = status.message;
+                    statusEl.style.backgroundColor = "#d4edda";
+                    statusEl.style.color = "#155724";
+                    toggleBtn.style.display = 'none';
+                    statusContainer.style.display = 'block';
+                } else {
+                    messageEl.textContent = "Indexer finished successfully.";
+                    statusEl.style.backgroundColor = "#d4edda";
+                    statusEl.style.color = "#155724";
+                    toggleBtn.style.display = 'none';
+                    statusContainer.style.display = 'block';
+                }
+            } else {
+                messageEl.textContent = "No status information available.";
+                statusEl.style.backgroundColor = "#eee";
+                statusEl.style.color = "#333";
+                toggleBtn.style.display = 'none';
+                statusContainer.style.display = 'block';
+                return;
             }
         }
 

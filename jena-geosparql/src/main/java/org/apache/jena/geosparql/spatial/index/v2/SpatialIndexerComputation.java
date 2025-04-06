@@ -137,11 +137,13 @@ public class SpatialIndexerComputation
         //     futures.forEach(future -> future.cancel(true));
         // }
 
-        executorService.shutdownNow();
-        try {
-            executorService.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Abandoning an executor serivce that failed to stop.", e);
+        if (executorService != null) {
+            executorService.shutdownNow();
+            try {
+                executorService.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Abandoning an executor serivce that failed to stop.", e);
+            }
         }
     }
 
